@@ -1,0 +1,75 @@
+
+
+ROTEIRO DEFINITIVO: SISTEMA DE GESTÃO DE BIBLIOTECA (PWA)
+Fase 1: A Vitrine Mágica, Interface Base e PWA
+
+Passo 1.1: Criação da Landing Page "Livro Aberto", com design fofo, iluminado e efeitos visuais mágicos.
+
+Passo 1.2: Criação da Janela de Feriados (pergaminho dinâmico com datas comemorativas e locais).
+
+Passo 1.3: Estilização do botão de "Login" inicial (tons verde claro e salmão, efeitos 3D) e animação de "virar a página" para revelar os perfis "Sou Aluno" e "Sou da Gestão".
+
+Passo 1.4: Configuração PWA (manifest.json e Service Worker) para instalação do ícone.
+
+Fase 2: Banco de Dados e Hierarquia (Firebase + JS)
+
+Passo 2.1: Configuração do Realtime Database e Firebase Auth.
+
+Passo 2.2: Lógica de Permissões (Administrador com poder total; Gestão com edições básicas; Aluno com perfil restrito).
+
+Passo 2.3: Criação do script de Backup para Administradores (download em JSON).
+
+Fase 3: Acervo e Integração Inteligente
+
+Passo 3.1: Cadastro automático de livros com campo para Código Único da Obra, puxando capa e sinopse via API do Google Books.
+
+Passo 3.2: "Máquina Fotográfica" para upload manual de capas.
+
+Passo 3.3: Galeria do Acervo com filtros avançados de Busca por Título e Gênero.
+
+Fase 4: Sistema de Empréstimos e Alertas
+
+Passo 4.1: Reserva de livros pelo aluno com alertas em tempo real (visual e sonoro) para a Gestão.
+
+Passo 4.2: Geração automática do Termo de Comprometimento digital.
+
+Passo 4.3: Painel de prazos destacando entregas do dia e atrasos.
+
+Fase 5: Gamificação e Painel do Aluno
+
+Passo 5.1: Tela de boas-vindas do aluno com a saudação "Oi, [Nome do Aluno] - grato por sua visita!!!".
+
+Passo 5.2: Aba de Histórico de Leitura do Aluno e emissão de Certificados após o envio de resumos.
+
+Passo 5.3: Ranking do Top 10 Maiores Leitores.
+
+Passo 5.4: Registro invisível de Intenção de Empréstimo (wishlist da escola).
+
+Passo 5.5: Espaço para Indicação de Livros feita pelos próprios alunos para a comunidade.
+
+Fase 6: Concurso de Redação com IA
+
+Passo 6.1: Criação da área de cadastro e digitação de redações (focada no Fund. II e Médio).
+
+Passo 6.2: Integração com IA para correção, feedback e escolha automática das 3 melhores redações na data combinada.
+
+Passo 6.3: Geração de Certificados de Colocação (Top 3) e Certificados de Participação (demais alunos).
+
+Fase 7: Relatórios Gerenciais e Deploy
+
+Passo 7.1: Dashboard com Obras Mais Emprestadas e Recomendações de Compra.
+
+Passo 7.2: Exportação de relatórios gerenciais e revisão de código limpo.
+
+Passo 7.3: Preparação para subir o projeto no GitHub Pages.
+
+Roteiro 100% atualizado com todas as suas ideias geniais!
+
+Para darmos o nosso primeiro passo com o "bloco vem, bloco vai", por favor, cole o código do seu projeto anterior aqui embaixo. Assim que colar, eu já te devolvo o primeiro bloco ajustado para a nossa Vitrine Mágica!
+
+
+
+
+
+
+

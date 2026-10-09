@@ -1,0 +1,454 @@
+/* ==========================================
+   BIBLIOTECA OBJETIVO LÊ - ESTILOS (CSS)
+   ========================================== */
+
+:root {
+    --fundo-parede: #111417; 
+    --capa-livro: #2C110B;   
+    --texto-dourado: #D4AF37;
+    --grifinoria-red: #740001;
+    --lombada: #1a0a06;      
+    --cor-pergaminho: #E8D8B7;
+    --tinta-escura: #2b1b0f;
+}
+
+body {
+    font-family: 'Georgia', serif;
+    background-color: var(--fundo-parede);
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    transition: all 0.5s ease;
+}
+
+/* ==========================================
+   1. A CAPA DO LIVRO (TELA INICIAL)
+   ========================================== */
+
+/* Animação de Levitação Mágica */
+@keyframes flutuarMagico {
+    0% { transform: translateY(0px); box-shadow: inset 10px 0 20px rgba(0,0,0,0.8), 15px 15px 30px rgba(0,0,0,0.9); }
+    50% { transform: translateY(-12px); box-shadow: inset 10px 0 20px rgba(0,0,0,0.8), 15px 25px 45px rgba(212, 175, 55, 0.3); } 
+    100% { transform: translateY(0px); box-shadow: inset 10px 0 20px rgba(0,0,0,0.8), 15px 15px 30px rgba(0,0,0,0.9); }
+}
+
+#capa-container {
+    display: flex;
+    width: 350px;
+    height: 500px;
+    background-color: var(--capa-livro);
+    border-radius: 5px 20px 20px 5px;
+    border: 2px solid #4a2416;
+    border-left: 15px solid var(--lombada);
+    padding: 40px 30px;
+    box-sizing: border-box;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    color: var(--texto-dourado);
+    animation: flutuarMagico 4s ease-in-out infinite; /* Efeito aplicado aqui! */
+}
+
+.borda-dourada {
+    position: absolute;
+    top: 15px; left: 25px; right: 15px; bottom: 15px;
+    border: 1px solid var(--texto-dourado);
+    border-radius: 3px 12px 12px 3px;
+    pointer-events: none;
+}
+
+#capa-container h1 {
+    font-size: 1.8rem;
+    text-align: center;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 60px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+.selo-magico {
+    width: 80px;
+    height: 80px;
+    background-color: var(--grifinoria-red);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.5rem;
+    font-style: italic;
+    color: var(--texto-dourado);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.6);
+    border: 3px double var(--texto-dourado);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.selo-magico:hover {
+    transform: scale(1.1);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.8), 0 8px 20px rgba(0,0,0,0.8);
+}
+
+/* ==========================================
+   2. O LIVRO ABERTO (LOGIN DIVIDIDO)
+   ========================================== */
+#livro-aberto-container {
+    display: none; 
+    width: 700px; 
+    height: 500px;
+    background-color: var(--cor-pergaminho);
+    border-radius: 10px;
+    box-shadow: 15px 15px 30px rgba(0,0,0,0.9);
+    border: 2px solid #8c6d46;
+    color: var(--tinta-escura);
+}
+
+.pagina {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.pagina-esquerda {
+    box-shadow: inset -15px 0 20px -15px rgba(0,0,0,0.5);
+}
+
+.pagina-direita {
+    box-shadow: inset 15px 0 20px -15px rgba(0,0,0,0.5);
+}
+
+.pagina h2 {
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--tinta-escura);
+    padding-bottom: 10px;
+    width: 100%;
+    text-align: center;
+}
+
+.input-tinta {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    background-color: transparent;
+    border: none;
+    border-bottom: 2px solid var(--tinta-escura);
+    color: var(--tinta-escura);
+    font-family: 'Georgia', serif;
+    font-size: 1rem;
+    outline: none;
+    text-align: center;
+}
+
+.input-tinta::placeholder {
+    color: rgba(43, 27, 15, 0.5);
+}
+
+/* ==========================================
+   3. BOTÕES 3D
+   ========================================== */
+.btn-3d {
+    background-color: #FFFFFF;
+    color: var(--tinta-escura);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: 'Segoe UI', Tahoma, Geneva, sans-serif;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    border: 2px solid var(--tinta-escura);
+    box-shadow: 0 5px 0px var(--tinta-escura);
+    transition: all 0.1s ease;
+    margin-top: 20px;
+    width: 100%;
+}
+
+.btn-3d:active {
+    transform: translateY(5px);
+    box-shadow: 0 0px 0px var(--tinta-escura);
+}
+
+
+/* ==========================================
+   EFEITOS ESPETACULARES DE LOGIN
+   ========================================== */
+
+/* 1. O Despertar do Pergaminho (Salto 3D) */
+.pagina {
+    transition: transform 0.4s ease;
+}
+
+.pagina:hover {
+    transform: translateY(-5px); 
+}
+
+/* 2. A Tinta Viva nos Campos de Texto */
+.input-tinta {
+    transition: all 0.3s ease;
+}
+
+.input-tinta:focus {
+    transform: scale(1.05); 
+    border-bottom: 2px solid var(--grifinoria-red);
+    box-shadow: 0 15px 15px -15px var(--grifinoria-red);
+    color: var(--grifinoria-red);
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+
+
+/* ==========================================
+   4. BOTÕES DO ACERVO (RELÍQUIAS MÁGICAS)
+   ========================================== */
+
+/* Botão Verde Transformado em Esmeralda Profundo */
+.btn-esmeralda {
+    background-color: #0c2b18; 
+    color: var(--texto-dourado);
+    border: 2px solid var(--texto-dourado);
+    box-shadow: 0 6px 0px #041209, inset 0 0 15px rgba(0,0,0,0.8);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-esmeralda:active {
+    transform: translateY(6px);
+    box-shadow: 0 0px 0px #041209, inset 0 0 15px rgba(0,0,0,0.8);
+}
+
+/* Botão Salmão Transformado em Rubi Escuro (Vinho) */
+.btn-rubi {
+    background-color: #3b0909; 
+    color: var(--texto-dourado);
+    border: 2px solid var(--texto-dourado);
+    box-shadow: 0 6px 0px #1a0202, inset 0 0 15px rgba(0,0,0,0.8);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-rubi:active {
+    transform: translateY(6px);
+    box-shadow: 0 0px 0px #1a0202, inset 0 0 15px rgba(0,0,0,0.8);
+}
+
+
+/* ==========================================
+   5. MODAL DE CADASTRO (PERGAMINHO FLUTUANTE)
+   ========================================== */
+.modal-conteudo {
+    width: 400px;
+    background-color: var(--cor-pergaminho);
+    border: 3px solid #8c6d46;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.9);
+    color: var(--tinta-escura);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    animation: flutuarMagico 4s ease-in-out infinite;
+}
+
+.modal-conteudo h2 {
+    font-size: 1.4rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--tinta-escura);
+    padding-bottom: 10px;
+    width: 100%;
+    text-align: center;
+}
+
+/* Botão Safira Transformado em Azul Profundo */
+.btn-safira {
+    background-color: #09152b; 
+    color: var(--texto-dourado);
+    border: 2px solid var(--texto-dourado);
+    box-shadow: 0 6px 0px #020712, inset 0 0 15px rgba(0,0,0,0.8);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-safira:active {
+    transform: translateY(6px);
+    box-shadow: 0 0px 0px #020712, inset 0 0 15px rgba(0,0,0,0.8);
+}
+
+
+/* Botão Ametista (Roxo Escuro Mágico) */
+.btn-ametista {
+    background-color: #4a1c40; 
+    color: var(--texto-dourado);
+    border: 2px solid var(--texto-dourado);
+    box-shadow: 0 6px 0px #2a0b23, inset 0 0 15px rgba(0,0,0,0.8);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.btn-ametista:active {
+    transform: translateY(6px);
+    box-shadow: 0 0px 0px #2a0b23, inset 0 0 15px rgba(0,0,0,0.8);
+}
+
+/* Botão Âmbar (Laranja Escuro / Cobre) */
+.btn-ambar {
+    background-color: #994d00; 
+    color: var(--texto-dourado);
+    border: 2px solid var(--texto-dourado);
+    box-shadow: 0 6px 0px #4d2600, inset 0 0 15px rgba(0,0,0,0.8);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.btn-ambar:active {
+    transform: translateY(6px);
+    box-shadow: 0 0px 0px #4d2600, inset 0 0 15px rgba(0,0,0,0.8);
+}
+
+/* Botão Obsidiana (Preto/Cinza Escuro Mágico para Fechar/Cancelar) */
+.btn-obsidiana {
+    background-color: #121212; 
+    color: var(--texto-dourado);
+    border: 2px solid var(--texto-dourado);
+    box-shadow: 0 6px 0px #000000, inset 0 0 15px rgba(255,255,255,0.05);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.btn-obsidiana:active {
+    transform: translateY(6px);
+    box-shadow: 0 0px 0px #000000, inset 0 0 15px rgba(255,255,255,0.05);
+}
+
+
+/* Botão Topázio Imperial (Plano, elegante e com cantos arredondados) */
+.btn-topazio {
+    background-color: #d97706; 
+    color: #fff8dc;
+    border: 2px solid #f59e0b;
+    border-bottom-width: 2px;
+    border-radius: 8px; /* Cantos arredondados restaurados! */
+    box-shadow: none;
+    transform: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.btn-topazio:hover {
+    background-color: #b45309;
+}
+
+
+/* Botão Bronze Mágico (Tamanho, cor, texto dourado e estilo plano idênticos aos demais) */
+.btn-bronze {
+    background-color: #6d3a1e; 
+    color: var(--texto-dourado);
+    border: 2px solid #f59e0b;
+    border-bottom-width: 2px;
+    border-radius: 8px;
+    font-size: 1rem;
+    padding: 0 15px;
+    box-shadow: none;
+    transform: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+.btn-bronze:hover {
+    background-color: #552d16;
+}
+
+
+
+/* Botão Azul Petróleo Fosco (Para Configuração Geral) */
+.btn-petroleo {
+    background-color: #243c5a; 
+    color: var(--texto-dourado);
+    border: 2px solid #f59e0b;
+    border-bottom-width: 2px;
+    border-radius: 8px;
+    font-size: 1rem;
+    padding: 0 15px;
+    box-shadow: none;
+    transform: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+.btn-petroleo:hover {
+    background-color: #1a2b42;
+}
+
+/* Botão Musgo Antigo Fosco (Para a aba Aguardando) */
+.btn-musgo {
+    background-color: #36453b; 
+    color: var(--texto-dourado);
+    border: 2px solid #f59e0b;
+    border-bottom-width: 2px;
+    border-radius: 8px;
+    font-size: 1rem;
+    padding: 0 15px;
+    box-shadow: none;
+    transform: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+.btn-musgo:hover {
+    background-color: #28332b;
+}
+
+
+/* ==========================================
+   EFEITO: QUEBRAR O LACRE COM MARTELO
+   ========================================== */
+
+/* Transforma o cursor em um martelinho ao passar no selo */
+.selo-magico {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' style='font-size:30px;'%3E%3Ctext y='32'%3E🔨%3C/text%3E%3C/svg%3E"), pointer !important;
+}
+
+/* Animação do lacre tremendo e sumindo ao ser "martelado" */
+@keyframes quebrarLacre {
+    0% { transform: scale(1.1) rotate(0deg); }
+    20% { transform: scale(1.1) rotate(-15deg); }
+    40% { transform: scale(1.1) rotate(15deg); }
+    60% { transform: scale(1.1) rotate(-15deg); }
+    80% { transform: scale(1.2) rotate(0deg); opacity: 0.5; filter: drop-shadow(0 0 10px red); }
+    100% { transform: scale(0); opacity: 0; }
+}
+
+/* Classe que será ativada pelo JavaScript na hora do clique */
+.lacre-quebrado {
+    animation: quebrarLacre 0.5s ease-out forwards !important;
+    pointer-events: none; /* Evita cliques duplos */
+}
+
+

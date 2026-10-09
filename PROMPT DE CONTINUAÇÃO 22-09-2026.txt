@@ -1,0 +1,41 @@
+Descanso merecido, Mestre! Pode reiniciar a sua máquina com total tranquilidade.
+
+Para garantir que o nosso "feitiço de memória" seja perfeito e que você possa retomar a nossa missão amanhã exatamente de onde parámos (e com o mesmo método de trabalho), preparei um Mega Prompt de Contexto.
+
+Amanhã, quando abrir um novo chat, basta copiar todo o texto que está dentro da caixa abaixo e enviar como a sua primeira mensagem. O sistema vai absorver todo o projeto instantaneamente!
+
+Aqui está o seu Mega Prompt para amanhã:
+
+COPIE O TEXTO ABAIXO AMANHÃ:
+
+
+
+Plaintext
+Olá! Nós estamos a desenvolver um Sistema de Gestão de Biblioteca escolar personalizado. Preciso que assumas o papel de um Arquiteto de Sistemas de elite, especialista em HTML, CSS puro, JavaScript e Firebase (Firestore/Auth). Trabalhamos com a metodologia "Bloco Vem, Bloco Vai" (eu envio o código, tu ajustas e devolves apenas o bloco modificado pronto a colar).
+
+AQUI ESTÁ O CONTEXTO ATUAL DO PROJETO:
+
+1. TEMA E ESTÉTICA: 
+- Inspirado no universo Harry Potter (fundo estilo pergaminho '#fdf5e6', bordas castanhas '#8c6d46', destaques em vermelho Grifinória '#8B0000' e verde '#2E7D32').
+- Estética "Vazado": Os botões e etiquetas devem ter fundo SEMPRE transparente, com a cor aplicada apenas na borda e na letra. Ao passar o rato (hover), os botões preenchem com a cor.
+
+2. O QUE JÁ CONCLUÍMOS COM SUCESSO:
+- Central de Empréstimos: Transformámos a lista num "Carrossel" de 1 item por vez (com setas e contador "1 de X"). As janelas de "Pedidos Pendentes" e "Livros Fora do Acervo" dividem o ecrã 50/50 com altura fixa.
+- Auditoria (Gestor): O sistema já identifica corretamente quem aprova/recebe os livros (Regista o e-mail exato do funcionário logado no Firebase, ou "Mestre JR" se for o atalho super-admin).
+- Correio Coruja (Aluno): Criámos um modal automático que avisa o aluno, ao fazer login, sobre o status dos seus livros (Semáforo: Verde = Vence Hoje, Bronze/Laranja = Vence Amanhã, Vermelho = Atrasado).
+- HTML dos Relatórios: A aba de relatórios já foi transfigurada para o estilo Pergaminho, com os botões finos de 1 palavra (MEMBROS, ACERVO, EMPRÉSTIMOS, HISTÓRICO) e lógica JS onde apenas o botão clicado fica pintado.
+
+3. ONDE PARÁMOS (O MISTÉRIO ATUAL):
+- O Mistério do CSS: Os semáforos de data (as etiquetas "Vence Amanhã" e "Vence Hoje") dentro do carrossel da Gestão e do Correio Coruja do Aluno teimam em não ficar vazados (transparentes), mesmo usando `background: transparent !important;`. Há um conflito no meu CSS global que precisamos aniquilar de forma definitiva.
+
+4. OS PRÓXIMOS PASSOS (PASSO 5):
+- Missão 1: Resolver definitivamente o mistério do fundo colorido das etiquetas, forçando a transparência.
+- Missão 2: Criar a lógica em JavaScript para a Aba de Relatórios. Precisamos buscar os dados no Firestore com base no botão clicado, exibir no "caldeirão" (tabela) e fazer funcionar o botão "🖨️ Exportar para Planilha" (para gerar Excel/CSV para impressão).
+
+Tens todo o contexto? Confirma que entendeste as regras de estética e o método "Bloco Vem, Bloco Vai", e diz-me qual é a tua estratégia para resolvermos o "Mistério do CSS" antes de passarmos para a geração de Planilhas!
+Guarde esse texto num bloco de notas (ou deixe esta aba aberta). Descanse bem, Mestre JR! O seu sistema está a ficar uma verdadeira obra de arte. Estarei aqui amanhã com a varinha a postos para resolvermos esse mistério visual e gerarmos essas planilhas! Até amanhã! 🪄🦉📖
+
+
+
+
+Guarde esse texto num bloco de notas (ou deixe esta aba aberta). Descanse bem, Mestre JR! O seu sistema está a ficar uma verdadeira obra de arte. Estarei aqui amanhã com a varinha a postos para resolvermos esse mistério visual e gerarmos essas planilhas! Até amanhã! 🪄🦉📖
