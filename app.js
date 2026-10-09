@@ -1,6 +1,6 @@
 // ==========================================
 // BIBLIOTECA OBJETIVO LÊ - MÓDULO PRINCIPAL
-// ==========================================
+// ========================================== 
 
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -1309,7 +1309,7 @@ function verificarPermissaoGerenciamentoContas() {
     const ehJr12 = usuarioAtual.includes("jr12"); // Identifica o mestre JR 12
 
     if (!ehAdm && !ehJr12) {
-        alert("⛔ Acesso Restrito! Apenas Administradores ou o mestre JR 12 possuem autoridade para gerenciar contas.");
+        alert("⛔ Acesso Restrito! Apenas Administradores possuem autoridade para gerenciar contas.");
         return false; // Bloqueia a ação
     }
     return true; // Permite a magia prosseguir
