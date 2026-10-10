@@ -26,7 +26,6 @@ document.getElementById('btn-abrir-livro').addEventListener('click', function() 
 });
 
 
-
 // ==========================================
 // 🧙‍♂️ GUARDIÃO DOS PORTÕES (LOGIN DA GESTÃO)
 // ==========================================
