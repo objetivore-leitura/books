@@ -961,9 +961,11 @@
     <!-- MODAL: CORREIO CORUJA (ALERTAS DO ALUNO)   -->
     <!-- ========================================== -->
     <div id="modal-alertas-aluno" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); z-index: 1200; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(4px);">
-        <div style="position: relative; width: 100%; max-width: 600px; background-color: #fdf5e6; padding: 30px; border-radius: 12px; border: 3px solid #8c6d46; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box;">
+        
+        <!-- 🪄 Aqui está o truque: Adicionei a classe 'modal-conteudo' -->
+        <div class="modal-conteudo" style="position: relative; width: 100%; max-width: 600px; background-color: #fdf5e6; padding: 30px; border-radius: 12px; border: 3px solid #8c6d46; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box;">
             
-            <button onclick="document.getElementById('modal-alertas-aluno').style.display='none'" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 1.8rem; font-weight: bold; color: #8B0000; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="Fechar">✖</button>
+            <button onclick="document.getElementById('modal-alertas-aluno').style.display='none'" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 1.8rem; font-weight: bold; color: #8B0000; cursor: pointer; transition: transform 0.2s;" title="Fechar">✖</button>
             
             <h2 style="color: #8B0000; border-bottom: 2px solid #8c6d46; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; text-align: center; text-transform: uppercase; font-size: 1.5rem; letter-spacing: 1px;">🦉 Correio Coruja</h2>
             <p style="text-align: center; color: #5c4033; font-size: 1.05rem; margin-top: -10px; margin-bottom: 20px; font-style: italic;">Aqui estão os seus avisos mágicos de empréstimo:</p>
@@ -980,47 +982,61 @@
     <script type="module" src="app.js"></script>
 
 
-<!-- 🛡️ ESCUDO DE ADAPTAÇÃO PARA O CELULAR (Coruja, Janelas e Imagens) -->
+    <!-- 🛡️ ESCUDO DE FORÇA MÁXIMA PARA O CELULAR -->
     <style>
         @media (max-width: 768px) {
-            /* 1. Resolve as janelas cortadas (Troca de Senha e Captura de Chave) */
             .modal-conteudo {
-                width: 92% !important; /* Garante que sobra um espacinho nas bordas da tela */
-                max-width: 100% !important;
-                padding-left: 15px !important;
-                padding-right: 15px !important;
+                width: 90vw !important; 
+                max-width: 90vw !important;
+                padding: 45px 15px 20px 15px !important; 
                 box-sizing: border-box !important;
+                overflow-x: hidden !important; 
             }
 
-            /* 2. Resolve o "X da Coruja" sobreposto ao texto */
-            /* Empurra os títulos um pouco para baixo para desviar do botão de fechar */
+            /* 🪄 Adicionado button[style*="absolute"] para o X da Coruja obedecer ao Escudo! */
+            .modal-conteudo span[style*="absolute"], 
+            .modal-conteudo div[style*="absolute"],
+            .modal-conteudo button[style*="absolute"] {
+                top: 10px !important;
+                right: 15px !important;
+                font-size: 1.8rem !important;
+                z-index: 9999 !important;
+                background: rgba(140, 109, 70, 0.2) !important;
+                border-radius: 50% !important;
+                width: 35px !important;
+                height: 35px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
             .modal-conteudo h2, 
             .modal-conteudo h3 {
-                margin-top: 28px !important; 
+                margin-top: 0 !important; 
+                font-size: 1.3rem !important; 
                 line-height: 1.3 !important;
-                font-size: 1.4rem !important; /* Ajusta o tamanho da fonte para não estourar */
+                text-align: center !important;
             }
 
-            /* 3. Resolve as imagens com cortes */
-            .modal-conteudo img, 
-            #acervo-magico-container img {
-                max-width: 100% !important;
-                height: auto !important;
-                object-fit: contain !important;
-            }
-
-            /* 4. Resolve textos e chaves compridas que empurram a tela */
             .modal-conteudo p, 
-            .modal-conteudo span,
-            .modal-conteudo input {
-                white-space: normal !important;
-                word-wrap: break-word !important; /* Obriga palavras gigantes a quebrarem de linha */
+            .modal-conteudo b, 
+            .modal-conteudo strong,
+            .modal-conteudo span {
+                word-break: break-all !important; 
                 overflow-wrap: break-word !important;
+                white-space: normal !important;
+                max-width: 100% !important;
+            }
+
+            .modal-conteudo input, 
+            .modal-conteudo select,
+            .modal-conteudo button:not([style*="absolute"]) {
+                width: 100% !important;
+                max-width: 100% !important;
                 box-sizing: border-box !important;
             }
         }
     </style>
-
 
 </body>
 </html>
