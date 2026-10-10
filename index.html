@@ -10,6 +10,52 @@
     
 <body>
 
+   
+<!-- ESTILOS MÁGICOS PARA O CELULAR (Adaptação da Capa) -->
+    <style>
+        /* Oculta os botões de virar a página no Computador */
+        .btn-alternar-login {
+            display: none;
+            background: none;
+            border: none;
+            color: #8B0000;
+            font-weight: bold;
+            text-decoration: underline;
+            cursor: pointer;
+            margin-top: 25px;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        /* Regras apenas para telas pequenas (Celular) */
+        @media (max-width: 768px) {
+            .btn-alternar-login {
+                display: block; /* Faz os botões aparecerem */
+                margin-left: auto;
+                margin-right: auto;
+            }
+            
+            /* Esconde a Gestão por padrão no celular */
+            #livro-aberto-container .pagina-esquerda {
+                display: none !important;
+            }
+            /* A página do Aluno ocupa 100% da tela */
+            #livro-aberto-container .pagina-direita {
+                display: flex !important;
+                width: 100% !important;
+            }
+
+            /* Quando a Gestão ativar o feitiço de virar a página... */
+            #livro-aberto-container.ver-gestao .pagina-esquerda {
+                display: flex !important;
+                width: 100% !important;
+            }
+            #livro-aberto-container.ver-gestao .pagina-direita {
+                display: none !important;
+            }
+        }
+    </style>
+
     <!-- CAPA DO LIVRO FECHADA -->
     <div id="capa-container">
         <div class="borda-dourada"></div>
@@ -19,11 +65,17 @@
 
     <!-- LIVRO ABERTO (LOGIN) -->
     <div id="livro-aberto-container">
+        
         <div class="pagina pagina-esquerda">
             <h2>Gestão (Colégio)</h2>
             <input type="email" id="colegio-email" class="input-tinta" placeholder="E-mail Administrativo"> 
             <input type="password" id="colegio-senha" class="input-tinta" placeholder="Palavra-passe">
             <button class="btn-3d" id="btn-login-colegio">Entrar no Acervo</button>
+            
+            <!-- Botão só visível no celular para voltar ao aluno -->
+            <button class="btn-alternar-login" onclick="document.getElementById('livro-aberto-container').classList.remove('ver-gestao')">
+                ⬅️ Voltar para Estudantes
+            </button>
         </div>
 
         <div class="pagina pagina-direita">
@@ -31,8 +83,18 @@
             <input type="email" id="aluno-email" class="input-tinta" placeholder="E-mail do Estudante">
             <input type="password" id="aluno-senha" class="input-tinta" placeholder="Palavra-passe">
             <button class="btn-3d" id="btn-login-aluno">Consultar Biblioteca</button>
+            
+            <!-- Botão só visível no celular para aceder à gestão -->
+            <button class="btn-alternar-login" onclick="document.getElementById('livro-aberto-container').classList.add('ver-gestao')">
+                🗝️ Acesso da Gestão
+            </button>
         </div>
+        
     </div>
+
+
+
+
 
     <!-- PAINEL PRINCIPAL DO ACERVO -->
     <div id="painel-principal" style="display: none; width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px;">
@@ -55,6 +117,8 @@
                 <button class="btn-musgo" id="btn-aba-relatorios" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box;">⏳ Relatórios</button>
             </div>
         </div>
+
+
 
 <!-- O Novo Acervo Mágico -->
         <div id="acervo-magico-container" style="text-align: center; margin-top: 10px;">
@@ -249,18 +313,45 @@
 
 
 
-    <!-- MODAL: CADASTRAR NOVO MEMBRO -->
+<!-- MODAL: CADASTRAR NOVO MEMBRO (A Cura Definitiva) -->
     <div id="modal-usuario" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 1000;">
         <div class="modal-conteudo">
             <h2>Pergaminho de Admissão</h2>
             <input type="text" id="nome-usuario" class="input-tinta" placeholder="Nome do Usuário" style="text-transform: capitalize;">
             <input type="email" id="email-usuario" class="input-tinta" placeholder="E-mail (@objetivore.edu)">
             <input type="password" id="senha-usuario" class="input-tinta" placeholder="Palavra-passe (mínimo 6 dígitos)">
-            <select id="nivel-usuario" class="input-tinta" style="background-color: var(--cor-pergaminho); cursor: pointer;">
-                <option value="aluno">Estudante (Aluno)</option>
-                <option value="gestao">Equipe (Gestão)</option>
-                <option value="adm">Administradores (Admin)</option>
-            </select>
+            
+            <!-- ⚔️ O FIM DO <SELECT> (Imune a bugs de navegador) ⚔️ -->
+            <!-- 1. O Guardião Invisível: É daqui que o seu app.js vai ler o valor -->
+            <input type="hidden" id="nivel-usuario" value="aluno">
+            
+            <!-- 2. O Painel Mágico de Escolha -->
+            <div style="display: flex; gap: 5px; margin-bottom: 15px; background: rgba(140, 109, 70, 0.15); padding: 5px; border-radius: 8px; border: 1px solid rgba(140, 109, 70, 0.3);">
+                <div onclick="mudarNivelVisual('aluno', this)" class="btn-nivel-visual" style="flex: 1; text-align: center; padding: 10px; background: #8c6d46; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">Aluno</div>
+                <div onclick="mudarNivelVisual('gestao', this)" class="btn-nivel-visual" style="flex: 1; text-align: center; padding: 10px; background: transparent; color: #5c4033; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">Gestão</div>
+                <div onclick="mudarNivelVisual('adm', this)" class="btn-nivel-visual" style="flex: 1; text-align: center; padding: 10px; background: transparent; color: #5c4033; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">Admin</div>
+            </div>
+
+            <!-- 3. O pequeno feitiço que pinta o botão clicado -->
+            <script>
+                function mudarNivelVisual(valor, elementoClicado) {
+                    // Grava o valor no input escondido
+                    document.getElementById('nivel-usuario').value = valor;
+                    
+                    // Tira a cor de destaque de todos os 3 botões
+                    const botoes = document.querySelectorAll('.btn-nivel-visual');
+                    botoes.forEach(b => {
+                        b.style.background = 'transparent';
+                        b.style.color = '#5c4033';
+                    });
+                    
+                    // Pinta apenas o que você acabou de clicar!
+                    elementoClicado.style.background = '#8c6d46';
+                    elementoClicado.style.color = 'white';
+                }
+            </script>
+            <!-- ========================================================= -->
+
             <div style="display: flex; gap: 10px; margin-top: 15px; width: 100%;">
                 <button class="btn-3d btn-esmeralda" id="salvar-usuario" style="flex: 1;">Registrar</button>
                 <button class="btn-3d btn-rubi" id="fechar-modal-usuario" style="flex: 1;">Recuar</button>
@@ -404,14 +495,14 @@
     <div style="display: flex; flex-direction: column; gap: 15px; max-width: 650px; margin: 0 auto; background: rgba(0,0,0,0.03); padding: 20px; border-radius: 8px; border: 1px dashed #8c6d46;">
         <label style="color: #8B0000; font-weight: bold;">Data e Hora de Início:</label>
         <div style="display: flex; gap: 10px;">
-            <input type="date" id="dataInicio" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
-            <input type="time" id="horaInicio" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
+            <input type="date" id="torneio-data-inicio" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
+            <input type="time" id="torneio-hora-inicio" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
         </div>
         
         <label style="color: #8B0000; font-weight: bold; margin-top: 10px;">Data e Hora de Fim:</label>
         <div style="display: flex; gap: 10px;">
-            <input type="date" id="dataFim" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
-            <input type="time" id="horaFim" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
+            <input type="date" id="torneio-data-fim" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
+            <input type="time" id="torneio-hora-fim" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
         </div>
         
         <!-- Botão Salvar Torneio (Plano com borda amarela) -->
