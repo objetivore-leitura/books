@@ -9,6 +9,7 @@
 <body>
     
 <body>
+
    
 <!-- ESTILOS MÁGICOS PARA O CELULAR (Adaptação da Capa) -->
     <style>
@@ -119,47 +120,70 @@
 
 
 
-<!-- O Novo Acervo Mágico -->
-        <div id="acervo-magico-container" style="text-align: center; margin-top: 10px;">
-            
-            <!-- LINHA DE CIMA: O Menu do Aluno -->
-            <!-- Está com display: none; para o JS mostrar depois -->
-            <div id="menu-aluno-top" style="display: none; justify-content: center; margin-bottom: 15px; width: 100%;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 950px; width: 100%; margin-left: auto; margin-right: auto;">
-                    
-                    <!-- Aba 1: Configurações -->
-                    <button class="btn-3d" id="btn-config-aluno" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; background: linear-gradient(to bottom, #11281a 0%, #0c1a11 100%); color: #daa520; border: 2px solid #8c6d46; border-radius: 8px; font-size: 0.95rem; font-weight: bold; text-transform: uppercase; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-family: inherit; padding: 0;">⚙️ Configurações</button>
-                    
-                    <!-- Aba 2: Solicitar Empréstimo -->
-<button class="btn-3d" id="btn-solicitar-emprestimo" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; background: linear-gradient(to bottom, #1a3a5a 0%, #0d1d2d 100%); color: #daa520; border: 2px solid #8c6d46; border-radius: 8px; font-size: 0.95rem; font-weight: bold; text-transform: uppercase; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-family: inherit; padding: 0;">📖 Reservar Obra</button>
-                    
-                    <!-- Aba 3: Provisória 2 -->
-                    <button class="btn-3d" id="btn-provisorio-2" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; background: linear-gradient(to bottom, #2d0f0f 0%, #1c0a0a 100%); color: #daa520; border: 2px solid #8c6d46; border-radius: 8px; font-size: 0.95rem; font-weight: bold; text-transform: uppercase; cursor: not-allowed; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-family: inherit; padding: 0; opacity: 0.7;">🚧 Em Breve</button>
-                    
-                </div>
-            </div>
+<!-- 🪄 ESTILOS MÁGICOS PARA O CELULAR (Acervo e Estante) -->
+    <style>
+        @media (max-width: 768px) {
+            /* Diminui o vão entre os botões para não estourarem a tela */
+            .grade-magica {
+                gap: 8px !important;
+            }
+            /* Reduz levemente a fonte dos botões para caber perfeitamente */
+            .grade-magica button, .grade-magica input {
+                font-size: 0.85rem !important;
+            }
+            /* Torna a Estante Estática mais estreita e centralizada */
+            #estante-estatica {
+                width: 92% !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                border-width: 3px !important;
+            }
+        }
+    </style>
 
-            <!-- LINHA DE BAIXO: Os 3 comandos principais na Grade Clássica -->
-            <div style="display: flex; justify-content: center; margin-bottom: 15px; width: 100%;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 950px; width: 100%; margin-left: auto; margin-right: auto;">
-                    <button class="btn-3d btn-ametista" id="btn-invocar-tomo" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box;">✨ Pesquisar Obra</button>
-                    
-                    <input type="text" id="input-busca-codigo" placeholder="Consultar Código" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; text-align: center; font-size: 1.1rem; border: 2px solid #8B0000; border-radius: 8px; background-color: rgba(20, 10, 5, 0.8); color: var(--cor-pergaminho); font-style: italic; box-shadow: 0 4px 8px rgba(0,0,0,0.5); outline: none;">
-                    
-                    <button class="btn-3d btn-ambar" id="btn-abrir-catalogo" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; box-shadow: none; transform: none; border-bottom-width: 2px;">📜 Catálogo Completo</button>
-                </div>
+    <!-- O Novo Acervo Mágico -->
+    <div id="acervo-magico-container" style="text-align: center; margin-top: 10px;">
+        
+        <!-- LINHA DE CIMA: O Menu do Aluno -->
+        <div id="menu-aluno-top" style="display: none; justify-content: center; margin-bottom: 15px; width: 100%;">
+            <div class="grade-magica" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 950px; width: 100%; margin-left: auto; margin-right: auto;">
+                
+                <button class="btn-3d" id="btn-config-aluno" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; background: linear-gradient(to bottom, #11281a 0%, #0c1a11 100%); color: #daa520; border: 2px solid #8c6d46; border-radius: 8px; font-size: 0.95rem; font-weight: bold; text-transform: uppercase; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-family: inherit; padding: 0;">⚙️ CONFIG</button>
+                
+                <button class="btn-3d" id="btn-solicitar-emprestimo" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; background: linear-gradient(to bottom, #1a3a5a 0%, #0d1d2d 100%); color: #daa520; border: 2px solid #8c6d46; border-radius: 8px; font-size: 0.95rem; font-weight: bold; text-transform: uppercase; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-family: inherit; padding: 0;">📖 RESERVAS</button>
+                
+                <button class="btn-3d" id="btn-provisorio-2" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; background: linear-gradient(to bottom, #2d0f0f 0%, #1c0a0a 100%); color: #daa520; border: 2px solid #8c6d46; border-radius: 8px; font-size: 0.95rem; font-weight: bold; text-transform: uppercase; cursor: not-allowed; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-family: inherit; padding: 0; opacity: 0.7;">🚧 BREVE</button>
+                
             </div>
-            
-            <!-- CONTADOR DE LIVROS -->
-            <p id="contador-livros" style="color: var(--cor-pergaminho); font-style: italic; margin-top: 15px; margin-bottom: 15px; font-size: 1rem; text-align: center; width: 100%; text-shadow: 0 0 5px rgba(255, 248, 220, 0.5);"></p>
-
         </div>
+
+        <!-- LINHA DE BAIXO: Os 3 comandos principais na Grade Clássica -->
+        <div style="display: flex; justify-content: center; margin-bottom: 15px; width: 100%;">
+            <div class="grade-magica" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 950px; width: 100%; margin-left: auto; margin-right: auto;">
+                <button class="btn-3d btn-ametista" id="btn-invocar-tomo" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box;">✨ OBRAS</button>
+                
+                <input type="text" id="input-busca-codigo" placeholder="Código" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; text-align: center; font-size: 1.1rem; border: 2px solid #8B0000; border-radius: 8px; background-color: rgba(20, 10, 5, 0.8); color: var(--cor-pergaminho); font-style: italic; box-shadow: 0 4px 8px rgba(0,0,0,0.5); outline: none;">
+                
+                <button class="btn-3d btn-ambar" id="btn-abrir-catalogo" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; box-shadow: none; transform: none; border-bottom-width: 2px;">📜 CATÁLOGO</button>
+            </div>
+        </div>
+        
+        <!-- CONTADOR DE LIVROS -->
+        <p id="contador-livros" style="color: var(--cor-pergaminho); font-style: italic; margin-top: 15px; margin-bottom: 15px; font-size: 1rem; text-align: center; width: 100%; text-shadow: 0 0 5px rgba(255, 248, 220, 0.5);"></p>
+
+    </div>
+
+    <!-- MANTENHA A SUA ESTANTE EXATAMENTE COMO ELA ESTÁ AQUI ABAIXO: -->
+    <!-- <div id="estante-estatica" ... -->
 
 
 
            <!-- A Estante Estática Decorativa -->
             <div id="estante-estatica" style="width: 100%; height: 260px; background: linear-gradient(to bottom, #0f0805 0%, #2a1610 70%, #4a2f24 100%); border: 4px solid #8c6d46; border-radius: 10px; box-shadow: inset 0 0 50px rgba(0,0,0,0.9), 0 10px 20px rgba(0,0,0,0.8); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 15px; gap: 10px; overflow: hidden; position: relative;">
                 <div style="position: absolute; top: -50px; left: 50%; transform: translateX(-50%); width: 250px; height: 250px; background: radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%); border-radius: 50%;"></div>
+
+
+
                 
                 <!-- Tomo 1: CONTOS -->
                 <div style="width: 45px; height: 160px; background: linear-gradient(to right, #4a0000 0%, #8b0000 20%, #8b0000 80%, #4a0000 100%); border: 2px solid #daa520; border-radius: 4px 2px 2px 4px; box-shadow: 5px 0 15px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px 0; z-index: 10;">
