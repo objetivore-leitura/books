@@ -1,6 +1,6 @@
 // ==========================================
 // BIBLIOTECA OBJETIVO LÊ - MÓDULO PRINCIPAL
-// ========================================== 
+// ==========================================
 
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -15,7 +15,7 @@ document.getElementById('btn-abrir-livro').addEventListener('click', function() 
     // 1. Aplica o efeito visual de "quebrar"
     this.classList.add('lacre-quebrado');
     
-    // 2. Aguarda 500 milissegundos (o tempo exato da animação) antes de abrir a capa
+    // 2. Aguarda 500 milissegundos (o tempo exato da animação) antes de abrir a capa   
     setTimeout(() => {
         document.getElementById('capa-container').style.display = 'none';
         document.getElementById('livro-aberto-container').style.display = 'flex';
@@ -231,8 +231,8 @@ async function carregarAcervo() {
         
         const numeroDestacado = `<strong style="color: #8B0000; font-size: 1.4rem; text-shadow: 0 0 3px rgba(255,255,255,0.2);">${totalLivros}</strong>`;
         const contadorTexto = totalLivros === 1 
-            ? `O acervo guarda atualmente ${numeroDestacado} obra mágica.` 
-            : `" O acervo guarda atualmente ${numeroDestacado} obras fantásticas "`;
+            ? `O acervo guarda atualmente ${numeroDestacado} Obra mágica.` 
+            : `" O acervo guarda atualmente ${numeroDestacado} Obras fantásticas "`;
             
         document.getElementById('contador-livros').innerHTML = contadorTexto;
     } catch (error) {
@@ -522,6 +522,16 @@ async function carregarTabelaGestao() {
     const container = document.getElementById('lista-gestao-container');
     container.innerHTML = "<p style='text-align: center; color: #5c4033; padding: 20px;'>⏳ Invocando registros do acervo...</p>";
 
+    // 🪄 FILTRO MAGICO DE CAPITALIZAÇÃO (Inteligente)
+    const formatarTexto = (texto) => {
+        if (!texto) return "";
+        const ignorar = ["de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", "o", "a", "os", "as"];
+        return texto.toLowerCase().split(" ").map((palavra, index) => {
+            if (index > 0 && ignorar.includes(palavra)) return palavra;
+            return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+        }).join(" ");
+    };
+
     try {
         const querySnapshot = await getDocs(collection(db, "livros"));
         if (querySnapshot.empty) {
@@ -542,9 +552,12 @@ async function carregarTabelaGestao() {
         querySnapshot.forEach((docSnap) => {
             const livro = docSnap.data();
             
-            // 🌟 APLICANDO O FEITIÇO DE TÍTULO E AUTOR CAPITALIZADOS (Title Case)
-            const tituloFmt = typeof capitalizar === 'function' ? capitalizar(livro.titulo) : (livro.titulo || '');
-            const autorFmt = typeof capitalizar === 'function' ? capitalizar(livro.autor) : (livro.autor || '');
+            // 🌟 APLICANDO O FEITIÇO DE TÍTULO E AUTOR CAPITALIZADOS
+            const tituloFmt = formatarTexto(livro.titulo || "Desconhecido");
+            const autorFmt = formatarTexto(livro.autor || "Desconhecido");
+
+            // Preparar o título para o botão de exclusão sem quebrar o código (caso o nome tenha aspas)
+            const tituloSeguro = tituloFmt.replace(/'/g, "\\'");
 
             htmlTabela += `<tr style="border-bottom: 1px dashed rgba(140,109,70,0.3); color: #333;">
                 <td style="padding: 8px; font-weight: bold; color: #8B0000;">${livro.codigo ? livro.codigo.toUpperCase() : '----'}</td>
@@ -552,7 +565,7 @@ async function carregarTabelaGestao() {
                 <td style="padding: 8px; font-style: italic;">${autorFmt}</td>
                 <td style="padding: 8px; text-align: center; white-space: nowrap;">
                     <button onclick="abrirEdicaoTomo('${docSnap.id}')" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-right: 8px;" title="Editar">✏️</button>
-                    <button onclick="excluirTomo('${docSnap.id}', '${livro.titulo}')" style="background: none; border: none; font-size: 1.2rem; cursor: pointer;" title="Excluir">🗑️</button>
+                    <button onclick="excluirTomo('${docSnap.id}', '${tituloSeguro}')" style="background: none; border: none; font-size: 1.2rem; cursor: pointer;" title="Excluir">🗑️</button>
                 </td></tr>`;
         });
         htmlTabela += `</tbody></table>`;
@@ -561,7 +574,6 @@ async function carregarTabelaGestao() {
         container.innerHTML = "<p style='text-align: center; color: #8B0000; padding: 20px;'>Falha ao invocar os registros.</p>";
     }
 }
-
 
 
 window.abrirEdicaoTomo = async function(idDoc) {
@@ -724,27 +736,47 @@ if (btnSubGeral && btnSubTorneio) {
 const btnSalvarTorneio = document.getElementById('btn-salvar-torneio');
 if (btnSalvarTorneio) {
     btnSalvarTorneio.addEventListener('click', async () => {
-        const dataInicio = document.getElementById('torneio-data-inicio').value;
-        const dataFim = document.getElementById('torneio-data-fim').value;
-        const horaInicio = document.getElementById('torneio-hora-inicio').value;
-        const horaFim = document.getElementById('torneio-hora-fim').value;
+        
+        // 1. Encontrar as caixinhas primeiro (sem tentar ler o valor ainda)
+        const inputDataInicio = document.getElementById('torneio-data-inicio');
+        const inputDataFim = document.getElementById('torneio-data-fim');
+        const inputHoraInicio = document.getElementById('torneio-hora-inicio');
+        const inputHoraFim = document.getElementById('torneio-hora-fim');
+
+        // 2. O Raio-X que avisa exatamente o que falta no HTML
+        if (!inputDataInicio) { alert("❌ O HTML está sem o ID: torneio-data-inicio"); return; }
+        if (!inputDataFim) { alert("❌ O HTML está sem o ID: torneio-data-fim"); return; }
+        if (!inputHoraInicio) { alert("❌ O HTML está sem o ID: torneio-hora-inicio"); return; }
+        if (!inputHoraFim) { alert("❌ O HTML está sem o ID: torneio-hora-fim"); return; }
+
+        // 3. Se todas existirem, agora é seguro ler os valores!
+        const dataInicio = inputDataInicio.value;
+        const dataFim = inputDataFim.value;
+        const horaInicio = inputHoraInicio.value;
+        const horaFim = inputHoraFim.value;
 
         if (!dataInicio || !dataFim || !horaInicio || !horaFim) {
-            alert("Preencha todas as datas e horários para invocar a Chave.");
+            alert("⚠️ Preencha todas as datas e horários para invocar a Chave.");
             return;
         }
 
         try {
+            btnSalvarTorneio.innerText = "Salvando..."; // Dá um feedback visual
+            
             await setDoc(doc(db, "configuracoes", "torneioChave"), {
                 dataInicio: dataInicio,
                 dataFim: dataFim,
                 horaInicio: horaInicio,
                 horaFim: horaFim,
-                registradoPor: window.usuarioNivelAtual
+                registradoPor: window.usuarioNivelAtual || "gestao"
             });
+            
+            btnSalvarTorneio.innerText = "Salvar Torneio";
             alert("✨ Feitiço realizado! A Chave Mágica foi agendada com sucesso.");
         } catch (error) {
-            alert("A magia falhou! Verifique a conexão com a biblioteca.");
+            console.error("Erro ao salvar torneio:", error);
+            btnSalvarTorneio.innerText = "Salvar Torneio";
+            alert("❌ A magia falhou! Verifique a conexão com a biblioteca.");
         }
     });
 }
@@ -1309,7 +1341,7 @@ function verificarPermissaoGerenciamentoContas() {
     const ehJr12 = usuarioAtual.includes("jr12"); // Identifica o mestre JR 12
 
     if (!ehAdm && !ehJr12) {
-        alert("⛔ Acesso Restrito! Apenas Administradores possuem autoridade para gerenciar contas.");
+        alert("⛔ Acesso Restrito! Apenas Administradores ou o mestre JR 12 possuem autoridade para gerenciar contas.");
         return false; // Bloqueia a ação
     }
     return true; // Permite a magia prosseguir
@@ -1464,6 +1496,16 @@ document.getElementById('btn-relatorio-usuarios')?.addEventListener('click', asy
     // Mensagem de Carregamento escurecida
     container.innerHTML = '<p style="color: #8c6d46; text-align: center; margin-top: 150px; font-style: italic; font-size: 1.2rem;">⏳ Lendo os pergaminhos de registro... Aguarde.</p>';
     
+    // 🪄 FILTRO MAGICO: Capitaliza palavras (ignorando "de", "da", etc)
+    const formatarTexto = (texto) => {
+        if (!texto) return "";
+        const ignorar = ["de", "da", "do", "das", "dos", "e"];
+        return texto.toLowerCase().split(" ").map(palavra => {
+            if (ignorar.includes(palavra)) return palavra;
+            return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+        }).join(" ");
+    };
+    
     try {
         const querySnapshot = await getDocs(collection(db, "usuarios"));
         
@@ -1491,9 +1533,11 @@ document.getElementById('btn-relatorio-usuarios')?.addEventListener('click', asy
 
         querySnapshot.forEach((docSnap) => {
             const dados = docSnap.data();
-            const nome = dados.nome || "Membro Anônimo";
-            const email = dados.email || "Sem e-mail";
-            const nivel = (dados.nivel || "aluno").toUpperCase();
+            
+            // 🪄 APLICANDO O FEITIÇO DA ESCRITA
+            const nome = formatarTexto(dados.nome || "Membro anônimo");
+            const email = (dados.email || "sem e-mail").toLowerCase(); // E-mail SEMPRE minúsculo
+            const nivel = formatarTexto(dados.nivel || "aluno"); // Vai ficar "Aluno" ou "Admin" em vez de tudo maiúsculo
             
             const bloqueado = dados.bloqueado === true;
             const corStatus = bloqueado ? "#ff4d4d" : "#4CAF50"; 
@@ -1541,6 +1585,17 @@ document.getElementById('btn-relatorio-livros')?.addEventListener('click', async
     // 1. Mensagem de Carregamento (Cor alterada para marrom do tema)
     container.innerHTML = '<p style="color: #8c6d46; text-align: center; margin-top: 150px; font-style: italic; font-size: 1.2rem;">⏳ Contando os tomos nas prateleiras... Aguarde.</p>';
     
+    // 🪄 FILTRO MAGICO: Capitaliza palavras (ignorando "de", "da", etc)
+    const formatarTexto = (texto) => {
+        if (!texto) return "";
+        const ignorar = ["de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", "o", "a", "os", "as"];
+        return texto.toLowerCase().split(" ").map((palavra, index) => {
+            // A primeira palavra do título/nome sempre fica maiúscula, mesmo se for "O" ou "A"
+            if (index > 0 && ignorar.includes(palavra)) return palavra;
+            return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+        }).join(" ");
+    };
+    
     try {
         // Busca todos os livros na coleção "livros"
         const querySnapshot = await getDocs(collection(db, "livros"));
@@ -1569,10 +1624,12 @@ document.getElementById('btn-relatorio-livros')?.addEventListener('click', async
         // 3. Preenche a tabela iterando sobre os documentos
         querySnapshot.forEach((docSnap) => {
             const dados = docSnap.data();
+            
+            // 🪄 APLICANDO O FEITIÇO DA ESCRITA
             const codigo = dados.codigo || "0000";
-            const titulo = dados.titulo || "Obra Desconhecida";
-            const autor = dados.autor || "Desconhecido";
-            const categoria = dados.categoria || "Geral";
+            const titulo = formatarTexto(dados.titulo || "obra desconhecida");
+            const autor = formatarTexto(dados.autor || "desconhecido");
+            const categoria = formatarTexto(dados.categoria || "geral");
             
             totalLivros++;
 
@@ -1616,6 +1673,19 @@ document.getElementById('btn-relatorio-emprestimos')?.addEventListener('click', 
     
     container.innerHTML = '<p style="color: #8c6d46; text-align: center; margin-top: 150px; font-style: italic; font-size: 1.2rem;">⏳ Consultando os contratos de empréstimo ativos... Aguarde.</p>';
     
+    // 🪄 FILTRO MAGICO: Capitaliza palavras (ignorando artigos e preposições no meio)
+    const formatarTexto = (texto) => {
+        if (!texto) return "";
+        // Se for um email, devolve logo tudo em minúsculas
+        if (texto.includes('@')) return texto.toLowerCase();
+        
+        const ignorar = ["de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", "o", "a", "os", "as"];
+        return texto.toLowerCase().split(" ").map((palavra, index) => {
+            if (index > 0 && ignorar.includes(palavra)) return palavra;
+            return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+        }).join(" ");
+    };
+    
     try {
         const q = query(collection(db, "emprestimos"), where("devolvido", "==", false));
         const querySnapshot = await getDocs(q);
@@ -1646,9 +1716,12 @@ document.getElementById('btn-relatorio-emprestimos')?.addEventListener('click', 
 
         querySnapshot.forEach((docSnap) => {
             const dados = docSnap.data();
-            const tituloLivro = dados.tituloLivro || "Obra Desconhecida";
+            
+            // 🪄 APLICANDO O FEITIÇO DA ESCRITA
+            const tituloLivro = formatarTexto(dados.tituloLivro || "obra desconhecida");
             const codigoLivro = dados.codigoLivro || "0000";
-            const nomeAluno = dados.nomeAluno || dados.alunoEmail || "Aluno";
+            const nomeAluno = formatarTexto(dados.nomeAluno || dados.alunoEmail || "aluno");
+            
             const dataDevolucaoStr = dados.dataDevolucao; 
             
             totalEmprestimos++;
@@ -1674,7 +1747,7 @@ document.getElementById('btn-relatorio-emprestimos')?.addEventListener('click', 
                     totalAtrasados++; 
                 } else if (diferencaDias === 1) {
                     statusTexto = "Vence Amanhã";
-                    corFundoStatus = "#d97706"; // Laranja escuro para melhorar legibilidade
+                    corFundoStatus = "#d97706"; 
                     corTextoStatus = "#ffffff"; 
                 } else {
                     statusTexto = `Faltam ${diferencaDias} dias`;
@@ -1718,6 +1791,7 @@ document.getElementById('btn-relatorio-emprestimos')?.addEventListener('click', 
         container.innerHTML = '<p style="color: #ff4d4d; text-align: center; margin-top: 150px; font-weight: bold;">❌ As forças das trevas impediram a leitura dos contratos.</p>';
     }
 });
+
 
 
 // ==========================================
@@ -2548,6 +2622,7 @@ window.addEventListener('scroll', dissiparFumaca);
 dissiparFumaca();
 
 
+
 // ==========================================
 // 📖 NAVEGAÇÃO DA CENTRAL DE HISTÓRICO (BACKUP)
 // ==========================================
@@ -2617,6 +2692,8 @@ function verificarSeEAdmin() {
     return (nivelAtual === 'adm' || nivelAtual === 'admin');
 }
 
+
+
 // ==========================================
 // 👥 1. HISTÓRICO DE MEMBROS 
 // ==========================================
@@ -2630,7 +2707,21 @@ if (btnHistMembros) {
         btnHistMembros.style.color = 'white';
 
         document.getElementById('ferramentas-relatorio').style.display = 'flex';
+        // Ajuste no texto para ficar coerente com as outras abas (e não falhar no container não definido)
+        const containerTabelaRelatorios = document.getElementById('container-tabela-relatorios');
         containerTabelaRelatorios.innerHTML = '<p style="color: #5c4033; text-align: center; margin-top: 150px; font-style: italic;">⏳ A extrair o registo de membros...</p>';
+
+        // 🪄 FILTRO MAGICO DE CAPITALIZAÇÃO
+        const formatarTexto = (texto) => {
+            if (!texto) return "";
+            if (texto.includes('@')) return texto.toLowerCase(); // Segurança extra para e-mails
+            
+            const ignorar = ["de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", "o", "a", "os", "as"];
+            return texto.toLowerCase().split(" ").map((palavra, index) => {
+                if (index > 0 && ignorar.includes(palavra)) return palavra;
+                return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+            }).join(" ");
+        };
 
         try {
             const querySnapshot = await getDocs(collection(db, "usuarios"));
@@ -2657,11 +2748,16 @@ if (btnHistMembros) {
             querySnapshot.forEach((docSnap) => {
                 const dados = docSnap.data();
                 const idDoc = docSnap.id;
-                const nome = dados.nome || "Anónimo"; const email = dados.email || "Sem e-mail";
-                const nivel = (dados.nivel || "aluno").toUpperCase();
+                
+                // 🪄 APLICANDO O FEITIÇO DA ESCRITA
+                const nome = formatarTexto(dados.nome || "Anónimo"); 
+                const email = (dados.email || "Sem e-mail").toLowerCase();
+                const nivel = formatarTexto(dados.nivel || "aluno"); 
+                
                 const statusTexto = (dados.bloqueado === true) ? "BLOQUEADO" : "ATIVO";
                 const corStatus = (dados.bloqueado === true) ? "#8B0000" : "#2E7D32";
 
+                // Guardamos no array de backup já com a formatação correta
                 window.dadosBackupAtual.push({ nome, email, nivel, status: statusTexto });
 
                 const colunaAcao = isAdmin ? `<td style="padding: 10px; text-align: center;"><button onclick="eliminarRegistoTeste('usuarios', '${idDoc}', 'btn-hist-membros')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.3)'" onmouseout="this.style.transform='scale(1)'" title="Eliminar Definitivamente">🗑️</button></td>` : "";
@@ -2677,6 +2773,8 @@ if (btnHistMembros) {
     });
 }
 
+
+
 // ==========================================
 // 📚 2. HISTÓRICO DE ACERVO
 // ==========================================
@@ -2690,7 +2788,20 @@ if (btnHistAcervo) {
         btnHistAcervo.style.color = 'white';
 
         document.getElementById('ferramentas-relatorio').style.display = 'flex';
+        // Garantindo que a caixa de texto existe
+        const containerTabelaRelatorios = document.getElementById('container-tabela-relatorios');
         containerTabelaRelatorios.innerHTML = '<p style="color: #5c4033; text-align: center; margin-top: 150px; font-style: italic;">⏳ A abrir os cofres da biblioteca...</p>';
+
+        // 🪄 FILTRO MAGICO DE CAPITALIZAÇÃO (Para Títulos, Autores e Categorias)
+        const formatarTexto = (texto) => {
+            if (!texto) return "";
+            const ignorar = ["de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", "o", "a", "os", "as"];
+            return texto.toLowerCase().split(" ").map((palavra, index) => {
+                // Se for a primeira palavra, capitaliza sempre (mesmo que seja "O" ou "A")
+                if (index > 0 && ignorar.includes(palavra)) return palavra;
+                return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+            }).join(" ");
+        };
 
         try {
             const querySnapshot = await getDocs(collection(db, "livros"));
@@ -2716,9 +2827,14 @@ if (btnHistAcervo) {
             querySnapshot.forEach((docSnap) => {
                 const dados = docSnap.data();
                 const idDoc = docSnap.id;
-                const codigo = dados.codigo || "0000"; const titulo = dados.titulo || "Desconhecido";
-                const autor = dados.autor || "Desconhecido"; const categoria = dados.categoria || "Geral";
+                
+                // 🪄 APLICANDO O FEITIÇO DA ESCRITA
+                const codigo = dados.codigo || "0000"; 
+                const titulo = formatarTexto(dados.titulo || "desconhecido");
+                const autor = formatarTexto(dados.autor || "desconhecido"); 
+                const categoria = formatarTexto(dados.categoria || "geral");
 
+                // Salva no backup já devidamente formatado
                 window.dadosBackupAtual.push({ codigo, titulo, autor, categoria });
 
                 const colunaAcao = isAdmin ? `<td style="padding: 10px; text-align: center;"><button onclick="eliminarRegistoTeste('livros', '${idDoc}', 'btn-hist-acervo')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.3)'" onmouseout="this.style.transform='scale(1)'" title="Eliminar Definitivamente">🗑️</button></td>` : "";
@@ -2734,6 +2850,7 @@ if (btnHistAcervo) {
     });
 }
 
+
 // ==========================================
 // ⏳ 3. HISTÓRICO DE EMPRÉSTIMOS
 // ==========================================
@@ -2747,7 +2864,20 @@ if (btnHistEmprestimos) {
         btnHistEmprestimos.style.color = 'white';
 
         document.getElementById('ferramentas-relatorio').style.display = 'flex';
+        const containerTabelaRelatorios = document.getElementById('container-tabela-relatorios');
         containerTabelaRelatorios.innerHTML = '<p style="color: #5c4033; text-align: center; margin-top: 150px; font-style: italic;">⏳ A abrir os contratos antigos...</p>';
+
+        // 🪄 FILTRO MAGICO DE CAPITALIZAÇÃO
+        const formatarTexto = (texto) => {
+            if (!texto) return "";
+            if (texto.includes('@')) return texto.toLowerCase(); // E-mails ficam minúsculos
+            
+            const ignorar = ["de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", "o", "a", "os", "as"];
+            return texto.toLowerCase().split(" ").map((palavra, index) => {
+                if (index > 0 && ignorar.includes(palavra)) return palavra;
+                return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+            }).join(" ");
+        };
 
         try {
             const querySnapshot = await getDocs(collection(db, "emprestimos"));
@@ -2773,8 +2903,10 @@ if (btnHistEmprestimos) {
             querySnapshot.forEach((docSnap) => {
                 const dados = docSnap.data();
                 const idDoc = docSnap.id;
-                const titulo = dados.tituloLivro || "Desconhecido";
-                const aluno = dados.nomeAluno || dados.alunoEmail || "Anónimo";
+                
+                // 🪄 APLICANDO O FEITIÇO DA ESCRITA
+                const titulo = formatarTexto(dados.tituloLivro || "desconhecido");
+                const aluno = formatarTexto(dados.nomeAluno || dados.alunoEmail || "anónimo");
                 
                 let dataSaida = "Sem registo";
                 if (dados.dataSolicitacao) {
@@ -2790,6 +2922,7 @@ if (btnHistEmprestimos) {
                     dataRetorno = "✅ Devolvido"; 
                 }
 
+                // Salva no backup formatado
                 window.dadosBackupAtual.push({ titulo, aluno, dataSaida, dataRetorno });
 
                 const colunaAcao = isAdmin ? `<td style="padding: 10px; text-align: center;"><button onclick="eliminarRegistoTeste('emprestimos', '${idDoc}', 'btn-hist-emprestimos')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.3)'" onmouseout="this.style.transform='scale(1)'" title="Eliminar Definitivamente">🗑️</button></td>` : "";
@@ -2804,7 +2937,6 @@ if (btnHistEmprestimos) {
         } catch (error) { containerTabelaRelatorios.innerHTML = '<p style="color: red; text-align: center;">Erro ao carregar empréstimos.</p>'; }
     });
 }
-
 // ==========================================
 // 💾 4. FUNÇÃO UNIVERSAL DE EXPORTAR (EXCEL)
 // ==========================================
