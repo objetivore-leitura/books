@@ -982,21 +982,42 @@
     <script type="module" src="app.js"></script>
 
 
-    <!-- 🛡️ ESCUDO DE FORÇA MÁXIMA PARA O CELULAR -->
+    <!-- 🛡️ ESCUDO DE OURO: FORÇA MÁXIMA E CENTRALIZAÇÃO ABSOLUTA (CELULAR) -->
     <style>
         @media (max-width: 768px) {
-            .modal-conteudo {
-                width: 90vw !important; 
-                max-width: 90vw !important;
+            
+            /* 1. MÁGICA DA CENTRALIZAÇÃO ABSOLUTA (Para o fundo escuro do modal) */
+            /* Garante que qualquer modal aberto fique perfeitamente centralizado no meio da tela */
+            div[id^="modal-"]:not([style*="none"]) {
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+            }
+
+            /* 2. O CORPO DOS MODAIS: Um pouquinho menores (85vw) e no centro exato! */
+            /* Pega a classe e também qualquer modal que não tenha a classe (Cura Universal) */
+            .modal-conteudo,
+            div[id^="modal-"] > div:first-child {
+                width: 85vw !important; 
+                max-width: 85vw !important;
+                margin: auto !important; /* Mágica que centraliza a própria caixa */
                 padding: 45px 15px 20px 15px !important; 
                 box-sizing: border-box !important;
                 overflow-x: hidden !important; 
             }
 
-            /* 🪄 Adicionado button[style*="absolute"] para o X da Coruja obedecer ao Escudo! */
+            /* 3. A ESTANTE: Um pouquinho menor e centralizada */
+            #estante-estatica {
+                width: 85% !important; 
+                margin: 0 auto !important; 
+                border-width: 3px !important;
+            }
+
+            /* 4. O X DE FECHAR: Sempre no topo, isolado e em forma de botão redondo */
             .modal-conteudo span[style*="absolute"], 
             .modal-conteudo div[style*="absolute"],
-            .modal-conteudo button[style*="absolute"] {
+            .modal-conteudo button[style*="absolute"],
+            div[id^="modal-"] > div:first-child > button[style*="absolute"] {
                 top: 10px !important;
                 right: 15px !important;
                 font-size: 1.8rem !important;
@@ -1008,29 +1029,43 @@
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
 
+            /* 5. TÍTULOS: Afastados do botão X para evitar sobreposição */
             .modal-conteudo h2, 
-            .modal-conteudo h3 {
+            .modal-conteudo h3,
+            div[id^="modal-"] > div:first-child h2,
+            div[id^="modal-"] > div:first-child h3 {
                 margin-top: 0 !important; 
                 font-size: 1.3rem !important; 
                 line-height: 1.3 !important;
                 text-align: center !important;
             }
 
+            /* 6. A GUILHOTINA DAS PALAVRAS (Evita que senhas e chaves gigantes empurrem a tela) */
             .modal-conteudo p, 
             .modal-conteudo b, 
             .modal-conteudo strong,
-            .modal-conteudo span {
+            .modal-conteudo span,
+            div[id^="modal-"] > div:first-child p,
+            div[id^="modal-"] > div:first-child b,
+            div[id^="modal-"] > div:first-child strong,
+            div[id^="modal-"] > div:first-child span {
                 word-break: break-all !important; 
                 overflow-wrap: break-word !important;
                 white-space: normal !important;
                 max-width: 100% !important;
             }
 
+            /* 7. ELEMENTOS INTERNOS (Inputs e Botões): Nunca vazam a janela */
             .modal-conteudo input, 
             .modal-conteudo select,
-            .modal-conteudo button:not([style*="absolute"]) {
+            .modal-conteudo button:not([style*="absolute"]),
+            div[id^="modal-"] > div:first-child input,
+            div[id^="modal-"] > div:first-child select,
+            div[id^="modal-"] > div:first-child button:not([style*="absolute"]) {
                 width: 100% !important;
                 max-width: 100% !important;
                 box-sizing: border-box !important;
