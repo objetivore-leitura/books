@@ -11,7 +11,7 @@ import { auth, db } from "./firebase-config.js";
 // ==========================================
 // 0. ABRIR A CAPA DO LIVRO (O SELO MÁGICO)
 // ==========================================
-document.getElementById('btn-abrir-livro').addEventListener('click', function() {
+document.getElementById('btn-abrir-livro').addEventListener('click', function() {   
     // 1. Aplica o efeito visual de "quebrar"
     this.classList.add('lacre-quebrado');
     
@@ -25,19 +25,167 @@ document.getElementById('btn-abrir-livro').addEventListener('click', function() 
     }, 500);
 });
 
+// ==========================================
+// CARREGAMENTO INICIAL DE DADOS (PRÉ-LOAD)
+// ==========================================
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        // Assim que o sistema reconhecer o usuário logado, força o carregamento das listas
+        // para que a aba de Empréstimos nunca esteja vazia ao ser aberta.
+        if (typeof carregarListasEmprestimos === 'function') {
+            carregarListasEmprestimos();
+        }
+        if (typeof carregarListaEmailsAlunos === 'function') {
+            carregarListaEmailsAlunos();
+        }
+    }
+});
+
+
+
+
+
+// ==========================================
+// 📋 FEITIÇO DA MESA DA GESTÃO (INTEGRADA AO LIVRO)
+// ==========================================
+window.invocarMesaDaGestao = async function() {
+    try {
+        const hoje = new Date();
+        hoje.setHours(0,0,0,0);
+
+        const snapTodos = await getDocs(collection(db, "emprestimos"));
+        
+        let pendentes = 0;
+        let atrasados = 0;
+        const contagemPodio = {};
+        const nomesPodio = {};
+
+        snapTodos.forEach((docSnap) => {
+            const emp = docSnap.data();
+
+            if (emp.status === "pendente" && emp.devolvido === false) {
+                pendentes++;
+            }
+
+            if (emp.status === "aprovado" && emp.devolvido === false && emp.dataDevolucao) {
+                const partes = emp.dataDevolucao.split('-');
+                if (partes.length === 3) {
+                    const limite = new Date(partes[0], partes[1] - 1, partes[2]);
+                    if (limite < hoje) atrasados++;
+                }
+            }
+
+            if(emp.status !== "rejeitado" && emp.alunoEmail && emp.temporadaEncerrada !== true) {
+                const mail = emp.alunoEmail.toLowerCase();
+                contagemPodio[mail] = (contagemPodio[mail] || 0) + 1;
+                let nomeOriginal = emp.nomeAluno || mail.split('@')[0];
+                nomesPodio[mail] = typeof capitalizar === 'function' ? capitalizar(nomeOriginal) : nomeOriginal;
+            }
+        });
+
+        let htmlGestao = "";
+        let mostrarModal = false;
+
+        if (pendentes > 0) {
+            htmlGestao += `
+                <div style="background-color: transparent !important; border: 2px solid #8c6d46 !important; padding: 15px; border-radius: 8px; border-left: 8px solid #8c6d46 !important; margin-bottom: 10px;">
+                    <strong style="color: #8c6d46 !important; font-size: 1.1rem;">⚠️ Aprovações Pendentes</strong><br>
+                    <span style="font-size: 0.95rem; color: #333 !important;">Você tem <strong>${pendentes}</strong> pedido(s) aguardando aprovação.</span>
+                </div>
+            `;
+            mostrarModal = true;
+        }
+
+        if (atrasados > 0) {
+            htmlGestao += `
+                <div style="background-color: transparent !important; border: 2px solid #8B0000 !important; padding: 15px; border-radius: 8px; border-left: 8px solid #8B0000 !important; margin-bottom: 10px;">
+                    <strong style="color: #8B0000 !important; font-size: 1.1rem;">🚨 Livros Atrasados</strong><br>
+                    <span style="font-size: 0.95rem; color: #333 !important;">Existem <strong>${atrasados}</strong> livro(s) com o prazo vencido.</span>
+                </div>
+            `;
+            mostrarModal = true;
+        }
+
+        const ranking = Object.keys(contagemPodio).sort((a,b) => contagemPodio[b] - contagemPodio[a]);
+        const top3 = ranking.slice(0, 3);
+        const hojeStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+        const avisoGestaoOculto = localStorage.getItem('gestao_podio_oculto_' + hojeStr);
+
+        if (top3.length > 0 && !avisoGestaoOculto) {
+            let textoGanhadores = "";
+            if(top3[0]) textoGanhadores += `<strong>🥇 1º</strong> ${nomesPodio[top3[0]]} (${contagemPodio[top3[0]]} obras)<br>`;
+            if(top3[1]) textoGanhadores += `<strong>🥈 2º</strong> ${nomesPodio[top3[1]]} (${contagemPodio[top3[1]]} obras)<br>`;
+            if(top3[2]) textoGanhadores += `<strong>🥉 3º</strong> ${nomesPodio[top3[2]]} (${contagemPodio[top3[2]]} obras)`;
+
+            htmlGestao += `
+                <div style="background-color: transparent !important; border: 2px solid #FFD700 !important; padding: 15px; border-radius: 8px; border-left: 8px solid #FFD700 !important; margin-bottom: 10px;">
+                    <strong style="color: #B8860B !important; font-size: 1.1rem;">🏆 Resumo do Pódio Atual</strong><br>
+                    <span style="font-size: 0.95rem; color: #333 !important; display: inline-block; margin-top: 8px; line-height: 1.6;">
+                        Líderes de leitura:<br>${textoGanhadores}
+                    </span>
+                    <div style="margin-top: 12px; text-align: right;">
+                        <button onclick="localStorage.setItem('gestao_podio_oculto_${hojeStr}', 'true'); document.getElementById('modal-alertas-aluno').style.display='none';" style="background-color: #B8860B; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s;">
+                            👁️ Ocultar Relatório Hoje
+                        </button>
+                    </div>
+                </div>
+            `;
+            mostrarModal = true;
+        }
+
+
+
+        // ========================================================
+        // O SEGREDO: Reutilizando a janela do HTML original!
+        // ========================================================
+        if (mostrarModal && htmlGestao !== "") {
+            const modal = document.getElementById('modal-alertas-aluno');
+            const conteudo = document.getElementById('conteudo-alertas-aluno');
+            
+            if (modal && conteudo) {
+                const tituloModal = modal.querySelector('h2');
+                const descModal = modal.querySelector('p');
+                
+                if (tituloModal) tituloModal.innerHTML = '⚙️ Painel da Gestão';
+                if (descModal) descModal.innerHTML = 'Resumo de alertas e pendências do acervo:';
+                
+                conteudo.innerHTML = htmlGestao;
+                
+                // O modal é ativado, mas só será visto pelos olhos do usuário quando ele abrir o livro!
+// A janela fica inteligente: só pula na tela se o livro (painel) já estiver aberto!
+                if (document.getElementById('painel-principal').style.display !== 'none') {
+                    modal.style.display = 'flex';
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Erro ao invocar a Mesa da Gestão:", error);
+    }
+};
+
+
+
 
 // ==========================================
 // 🧙‍♂️ GUARDIÃO DOS PORTÕES (LOGIN DA GESTÃO)
 // ==========================================
-document.getElementById('btn-login-colegio')?.addEventListener('click', async () => {    
+document.getElementById('btn-login-colegio')?.addEventListener('click', async () => {   
     const email = document.getElementById('colegio-email').value.trim();
-
     const senha = document.getElementById('colegio-senha').value.trim();
 
+    // 🏆 O LOGIN DO MESTRE
     if (email.toUpperCase() === "JR" && senha === "12") {
         alert("Acesso Mestre Concedido! Bem-vindo, Criador JR.");
         window.usuarioNivelAtual = "adm";
         abrirPainelAcervo("adm"); 
+        
+        // ✨ GATILHO MÁGICO 1: O Painel da Gestão aparece para o Mestre
+        setTimeout(() => {
+            if (typeof window.invocarMesaDaGestao === "function") {
+                window.invocarMesaDaGestao();
+            }
+        }, 800);
+        
         return;
     }
 
@@ -51,6 +199,12 @@ document.getElementById('btn-login-colegio')?.addEventListener('click', async ()
         return;
     }
 
+    // 🛡️ ESCUDO ANTI-DUPLO-CLIQUE
+    const btnColegio = document.getElementById('btn-login-colegio');
+    const textoOriginal = btnColegio.innerText;
+    btnColegio.innerText = "⏳ Acessando...";
+    btnColegio.disabled = true;
+
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, senha);
         const user = userCredential.user;
@@ -61,33 +215,54 @@ document.getElementById('btn-login-colegio')?.addEventListener('click', async ()
         if (docSnap.exists()) {
             const dadosUsuario = docSnap.data();
             
-            // 🛑 TRAVA DE SEGURANÇA MÁXIMA: VERIFICA SE ESTÁ BLOQUEADO!
             if (dadosUsuario.bloqueado === true) {
-                alert("🚫 Acesso Negado! Esta conta foi bloqueada pela Gestão e as portas estão trancadas para você.");
-                await signOut(auth); // Expulsa o usuário na mesma hora!
-                return; // Interrompe o login
+                alert("🚫 Acesso Negado! Esta conta foi bloqueada.");
+                await signOut(auth); 
+                btnColegio.innerText = textoOriginal;
+                btnColegio.disabled = false;
+                return; 
             }
 
             let nivel = dadosUsuario.nivel || dadosUsuario.cargo || "aluno";
             if (nivel === "admin") nivel = "adm"; 
 
             window.usuarioNivelAtual = nivel;
+            window.usuarioId = user.uid; 
             
             if (nivel === "gestao" || nivel === "adm") {
+                
                 alert(`Sucesso! Acesso concedido para (${nivel.toUpperCase()}): ${dadosUsuario.nome || email}`);
+                
                 abrirPainelAcervo(nivel); 
+                btnColegio.innerText = textoOriginal;
+                btnColegio.disabled = false;
+                
+                // ✨ GATILHO MÁGICO 2: O Painel da Gestão aparece para Adm/Gestão
+                setTimeout(() => {
+                    if (typeof window.invocarMesaDaGestao === "function") {
+                        window.invocarMesaDaGestao();
+                    }
+                }, 800); 
+                
             } else {
                 alert("Acesso Negado! O seu selo é de Aluno. Por favor, use a página da direita.");
-                await signOut(auth); // Expulsa se tentar logar no lugar errado
+                await signOut(auth); 
+                btnColegio.innerText = textoOriginal;
+                btnColegio.disabled = false;
             }
         } else {
-            alert("Erro: O seu perfil não foi encontrado nos arquivos da biblioteca.");
+            alert("Erro: O seu perfil não foi encontrado.");
+            btnColegio.innerText = textoOriginal;
+            btnColegio.disabled = false;
         }
     } catch (error) {
         console.error("Erro no acesso:", error.message);
         alert("Feitiço falhou! Verifique suas credenciais.");
+        btnColegio.innerText = textoOriginal;
+        btnColegio.disabled = false;
     }
 });
+
 
 
 // ==========================================
@@ -112,6 +287,7 @@ document.getElementById('btn-login-aluno').addEventListener('click', async () =>
         alert("Acesso negado! A senha ou e-mail estão incorretos.");
     }
 });
+
 
 // ==========================================
 // FUNÇÃO DE TRANSIÇÃO (O ACERVO REVELADO)
@@ -150,6 +326,8 @@ document.getElementById('fechar-modal-usuario').addEventListener('click', () => 
     document.getElementById('modal-usuario').style.display = 'none';
 });
 
+
+
 // ==========================================
 // REGISTRO E VALIDAÇÃO DE NOVOS LIVROS (BLINDADO)
 // ==========================================
@@ -159,6 +337,9 @@ document.getElementById('salvar-livro').addEventListener('click', async () => {
     const autor = document.getElementById('autor-livro').value.trim();
     const categoria = document.getElementById('categoria-livro').value.trim();
     const resumo = document.getElementById('resumo-livro').value.trim();
+    
+    // NOVIDADE: Captura o ciclo escolhido (F1, F2 ou ME)
+    const cicloLivro = document.getElementById('ciclo-livro').value;
 
     const regex4Digitos = /^\d{4}$/;
     if (!regex4Digitos.test(codigo)) {
@@ -168,6 +349,14 @@ document.getElementById('salvar-livro').addEventListener('click', async () => {
 
     if (!titulo || !autor || !categoria) {
         alert("Atenção: Todos os campos do pergaminho (exceto o resumo) devem ser preenchidos.");
+        return;
+    }
+
+    // NOVIDADE: Alerta Mágico de Confirmação para Obras!
+    const confirmacaoLivro = confirm(`📜 ATENÇÃO, GESTÃO!\n\nVocê está catalogando uma nova obra:\n\nTítulo: ${titulo}\nCódigo: ${codigo}\nCiclo Permitido: ${cicloLivro}\n\nTem certeza de que as informações e o nível estão corretos?`);
+    
+    // Se a Gestão clicar em "Cancelar", interrompe o cadastro aqui.
+    if (!confirmacaoLivro) {
         return;
     }
 
@@ -192,22 +381,35 @@ document.getElementById('salvar-livro').addEventListener('click', async () => {
             titulo: titulo,
             autor: autor,
             categoria: categoria,
+            ciclo: cicloLivro, // <-- NOVIDADE: Salvando o ciclo da obra no Firebase!
             resumo: resumo || "Nenhum resumo registrado para esta obra milenar.",
             criadoEm: new Date()
         });
 
         alert("Sucesso! A obra foi catalogada e lacrada no acervo.");
+
+
         
         // ==========================================
-        // 🔥 GATILHO DO LOG (Regista a ação e o nome do livro)
+        // 🔥 GATILHO DO LOG (Regista a ação, o nome do livro e o ciclo)
         // ==========================================
-        if (typeof registrarLog === 'function') registrarLog(`Catalogou a obra: "${titulo}" (Cód: ${codigo})`);
+        if (typeof registrarLog === 'function') registrarLog(`Catalogou a obra: "${titulo}" (Cód: ${codigo}) - Ciclo: ${cicloLivro}`);
         
         document.getElementById('codigo-livro').value = '';
         document.getElementById('titulo-livro').value = '';
         document.getElementById('autor-livro').value = '';
         document.getElementById('categoria-livro').value = '';
         document.getElementById('resumo-livro').value = ''; 
+        
+        // NOVIDADE: Voltando o ciclo padrão para F1 e limpando as cores dos botões
+        document.getElementById('ciclo-livro').value = 'F1';
+        const botoesCicloLivro = document.querySelectorAll('.btn-ciclo-livro');
+        if(botoesCicloLivro.length > 0){
+            botoesCicloLivro.forEach(b => { b.style.background = 'transparent'; b.style.color = '#5c4033'; });
+            botoesCicloLivro[0].style.background = '#8c6d46';
+            botoesCicloLivro[0].style.color = 'white';
+        }
+
         document.getElementById('modal-livro').style.display = 'none';
 
         carregarAcervo();
@@ -219,6 +421,7 @@ document.getElementById('salvar-livro').addEventListener('click', async () => {
     btnSalvar.innerHTML = "Salvar Obra"; 
     btnSalvar.disabled = false; 
 });
+
 
 // ==========================================
 // ATUALIZAR O CONTADOR
@@ -288,33 +491,41 @@ function renderizarLista(livros, filtroBusca = "", filtroStatus = "todos") {
         const autorCap = capitalizar(livro.autor);
         const categoriaCap = capitalizar(livro.categoria);
         const codigoFmt = livro.codigo ? livro.codigo.toUpperCase() : "";
+        const cicloLivro = (livro.ciclo || "Geral").toUpperCase(); 
         
         const estaEmprestado = livrosEmprestadosCodigos.includes(codigoFmt);
         const corStatus = estaEmprestado ? "#8B0000" : "#2E7D32"; 
         const iconeStatus = estaEmprestado ? "🔴" : "🟢";
         const textoStatus = estaEmprestado ? "Emprestado/Reservado" : "Livre nas Prateleiras";
         
+        // A Mágica das Cores da Etiqueta de Ciclo
+        let corFundoCiclo = "#e0e0e0"; 
+        let corTextoCiclo = "#333";
+        
+        if (cicloLivro === "F1") { corFundoCiclo = "#2E7D32"; corTextoCiclo = "white"; } // Verde
+        else if (cicloLivro === "F2") { corFundoCiclo = "#d97706"; corTextoCiclo = "white"; } // Laranja Escuro
+        else if (cicloLivro === "ME") { corFundoCiclo = "#1a3a5a"; corTextoCiclo = "white"; } // Azul Marinho
+
         const item = document.createElement('div');
-        // Carta mais compacta e ajustada
         item.style.backgroundColor = "white"; 
         item.style.border = `2px solid ${corStatus}`;
         item.style.borderRadius = "8px";
-        item.style.padding = "12px 15px"; // Reduzimos o espaço interno
+        item.style.padding = "12px 15px"; 
         item.style.boxShadow = "0 3px 5px rgba(0,0,0,0.05)";
         item.style.display = "flex";
         item.style.flexDirection = "column";
 
-item.innerHTML = `
+        item.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; border-bottom: 1px dashed rgba(140, 109, 70, 0.3); padding-bottom: 6px;">
                 <div style="color: ${corStatus}; font-size: 0.85rem; font-weight: bold; font-style: italic; margin-top: 6px;">
                     ${iconeStatus} ${textoStatus}
                 </div>
                 
-                <!-- O Ícone voltou para o topo com a classe que o faz pulsar! -->
-                <button class="icone-copiar-magico" style="background: white; font-size: 1.3rem; cursor: pointer; transition: transform 0.2s; padding: 5px 8px; line-height: 1;" 
+                <!-- A ETIQUETA BOTÃO: Sem prancheta, apenas a sigla piscando e copiando o código! -->
+                <button class="icone-copiar-magico" style="background-color: ${corFundoCiclo}; color: ${corTextoCiclo}; border: none; font-size: 0.9rem; font-weight: bold; padding: 5px 12px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: transform 0.2s;" 
                         onclick="navigator.clipboard.writeText('${codigoFmt}').then(() => alert('O código ${codigoFmt} foi copiado magicamente!'))"
-                        onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="Copiar Código para Reservar">
-                    📋
+                        onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Clique para copiar o Código de Reserva">
+                    ${cicloLivro}
                 </button>
             </div>
             
@@ -332,7 +543,6 @@ item.innerHTML = `
         containerLista.appendChild(item);
     });
 }
-
 
 
 
@@ -403,27 +613,60 @@ document.getElementById('salvar-usuario').addEventListener('click', async () => 
     const email = document.getElementById('email-usuario').value.trim();
     const senha = document.getElementById('senha-usuario').value.trim();
     const nivel = document.getElementById('nivel-usuario').value;
+    
+    // NOVIDADE: Captura o ciclo escolhido (F1, F2 ou ME)
+    const cicloAluno = document.getElementById('ciclo-usuario').value;
 
     if (!nome || !email || !senha) { alert("Atenção: Preencha todos os campos."); return; }
     if (!email.includes("@objetivore.edu")) { alert("Selo Incorreto: Use o e-mail @objetivore.edu."); return; }
     if (senha.length < 6) { alert("Proteção Fraca: A senha precisa ter no mínimo 6 caracteres."); return; }
 
+    // NOVIDADE: Alerta de Confirmação para a Gestão
+    const confirmacao = confirm(`🛡️ ATENÇÃO, GESTÃO!\n\nVocê está prestes a registrar um novo membro:\n\nNome: ${nome}\nNível de Acesso: ${nivel.toUpperCase()}\nCiclo do Aluno: ${cicloAluno}\n\nTem certeza de que as informações estão corretas?`);
+    
+    // Se a Gestão clicar em "Cancelar", interrompe o cadastro
+    if (!confirmacao) {
+        return; 
+    }
+
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
+        
+        // NOVIDADE: Adicionando o 'ciclo: cicloAluno' para ser salvo no banco de dados
         await setDoc(doc(db, "usuarios", userCredential.user.uid), {
-            nome: nome, email: email, nivel: nivel, criadoEm: new Date()
+            nome: nome, email: email, nivel: nivel, ciclo: cicloAluno, criadoEm: new Date()
         });
+        
         alert(`Sucesso! O membro ${nome} foi admitido oficialmente na biblioteca.`);
         
         // ==========================================
         // 🔥 GATILHO DO LOG (Regista a admissão)
         // ==========================================
-        if (typeof registrarLog === 'function') registrarLog(`Admitiu o novo membro: "${nome}" (${nivel})`);
+        if (typeof registrarLog === 'function') registrarLog(`Admitiu o novo membro: "${nome}" (${nivel}) - Ciclo: ${cicloAluno}`);
         
+        // Limpando os campos após salvar
         document.getElementById('nome-usuario').value = '';
         document.getElementById('email-usuario').value = '';
         document.getElementById('senha-usuario').value = '';
         document.getElementById('nivel-usuario').value = 'aluno';
+        
+        // NOVIDADE: Voltando o ciclo padrão para F1 e limpando as cores dos botões
+        document.getElementById('ciclo-usuario').value = 'F1';
+        const botoesCiclo = document.querySelectorAll('.btn-ciclo-visual');
+        if(botoesCiclo.length > 0){
+            botoesCiclo.forEach(b => { b.style.background = 'transparent'; b.style.color = '#5c4033'; });
+            botoesCiclo[0].style.background = '#8c6d46';
+            botoesCiclo[0].style.color = 'white';
+        }
+        
+        // NOVIDADE: Voltando os botões de nível para o padrão
+        const botoesNivel = document.querySelectorAll('.btn-nivel-visual');
+        if(botoesNivel.length > 0){
+             botoesNivel.forEach(b => { b.style.background = 'transparent'; b.style.color = '#5c4033'; });
+             botoesNivel[0].style.background = '#8c6d46';
+             botoesNivel[0].style.color = 'white';
+        }
+
         document.getElementById('modal-usuario').style.display = 'none';
     } catch (error) {
         if (error.code === 'auth/email-already-in-use') {
@@ -517,9 +760,11 @@ document.getElementById('fechar-modal-gestao').addEventListener('click', () => {
     document.getElementById('modal-gestao').style.display = 'none';
 });
 
+
+
 async function carregarTabelaGestao() {
     const container = document.getElementById('lista-gestao-container');
-    container.innerHTML = "<p style='text-align: center; color: #5c4033; padding: 20px;'>⏳ Invocando registros do acervo...</p>";
+    container.innerHTML = "<p style='text-align: center; color: #5c4033; padding: 20px;'>⏳ Acessando registros do acervo...</p>";
 
     // 🪄 FILTRO MAGICO DE CAPITALIZAÇÃO (Inteligente)
     const formatarTexto = (texto) => {
@@ -574,7 +819,9 @@ async function carregarTabelaGestao() {
     }
 }
 
-
+// ==========================================
+// EDITAR E REINSCREVER TOMO
+// ==========================================
 window.abrirEdicaoTomo = async function(idDoc) {
     try {
         const docRef = doc(db, "livros", idDoc);
@@ -587,6 +834,23 @@ window.abrirEdicaoTomo = async function(idDoc) {
             document.getElementById('edit-categoria').value = livro.categoria || '';
             document.getElementById('edit-codigo').value = livro.codigo || '';
             document.getElementById('edit-resumo').value = livro.resumo || '';
+
+            // NOVIDADE: Lendo o ciclo do banco (se for livro antigo, assume F1)
+            const cicloAtual = livro.ciclo || 'F1';
+            document.getElementById('edit-ciclo').value = cicloAtual;
+
+            // NOVIDADE: Pintando o botão correto de acordo com o ciclo salvo
+            const botoesEditCiclo = document.querySelectorAll('.btn-edit-ciclo');
+            botoesEditCiclo.forEach(b => {
+                if (b.innerText === cicloAtual) {
+                    b.style.background = '#8c6d46';
+                    b.style.color = 'white';
+                } else {
+                    b.style.background = 'transparent';
+                    b.style.color = '#5c4033';
+                }
+            });
+
             document.getElementById('modal-editar').style.display = 'flex';
         }
     } catch (error) { alert("Falha ao invocar os dados do tomo."); }
@@ -598,20 +862,40 @@ document.getElementById('fechar-modal-editar').addEventListener('click', () => {
 
 document.getElementById('salvar-edicao').addEventListener('click', async () => {
     const idDoc = document.getElementById('edit-id-doc').value;
+    const tituloEditado = document.getElementById('edit-titulo').value.trim();
+    const codigoEditado = document.getElementById('edit-codigo').value.trim();
+    
+    // NOVIDADE: Captura o novo ciclo editado
+    const cicloEditado = document.getElementById('edit-ciclo').value;
+
+    // NOVIDADE: Alerta de Confirmação!
+    const confirmacao = confirm(`📜 ATENÇÃO, GESTÃO!\n\nVocê está alterando as informações desta obra:\n\nTítulo: ${tituloEditado}\nCódigo: ${codigoEditado}\nCiclo Permitido: ${cicloEditado}\n\nConfirma a atualização do acervo?`);
+    
+    if (!confirmacao) {
+        return; // Interrompe se a Gestão cancelar
+    }
+
     try {
         await updateDoc(doc(db, "livros", idDoc), {
-            titulo: document.getElementById('edit-titulo').value.trim(),
+            titulo: tituloEditado,
             autor: document.getElementById('edit-autor').value.trim(),
             categoria: document.getElementById('edit-categoria').value.trim(),
-            codigo: document.getElementById('edit-codigo').value.trim(),
+            codigo: codigoEditado,
+            ciclo: cicloEditado, // NOVIDADE: Salvando o novo ciclo
             resumo: document.getElementById('edit-resumo').value.trim()
         });
+        
         alert("O tomo foi reinscrevido com sucesso!");
+        
+        // Gatilho opcional de log para a edição
+        if (typeof registrarLog === 'function') registrarLog(`Editou a obra: "${tituloEditado}" - Novo Ciclo: ${cicloEditado}`);
+
         document.getElementById('modal-editar').style.display = 'none';
         carregarTabelaGestao(); 
         carregarAcervo();       
     } catch (error) { alert("O feitiço de atualização falhou."); }
 });
+
 
 // ==========================================
 // 🏆 LÓGICA DO TORNEIO DA CHAVE (APARIÇÃO E CAPTURA)
@@ -784,7 +1068,6 @@ if (btnSalvarTorneio) {
 // ==========================================
 // 🏆 PAINEL DE RESULTADOS GERAIS (COM ABAS E CERTIFICADOS)
 // ==========================================
-const btnResultadoGeral = document.getElementById('btn-resultado-geral');
 const modalResultado = document.getElementById('modal-resultado');
 const btnFecharResultado = document.getElementById('fechar-modal-resultado');
 
@@ -798,7 +1081,7 @@ const abaResultadoChave = document.getElementById('aba-resultado-chave');
 const abaResultadoRedacao = document.getElementById('aba-resultado-redacao');
 const abaResultadoLeitores = document.getElementById('aba-resultado-leitores');
 
-// Feitiço para alternar as abas
+// Feitiço para alternar as abas do Resultado
 function alternarAbaResultado(abaAtiva, btnAtivo) {
     // 1. Esconde todas as abas
     if(abaResultadoChave) abaResultadoChave.style.display = 'none';
@@ -821,20 +1104,28 @@ function alternarAbaResultado(abaAtiva, btnAtivo) {
     }
 }
 
-// Eventos de clique nas abas
+// Eventos de clique nas abas internas
 if (btnTabChave) btnTabChave.addEventListener('click', () => alternarAbaResultado(abaResultadoChave, btnTabChave));
 if (btnTabRedacao) btnTabRedacao.addEventListener('click', () => alternarAbaResultado(abaResultadoRedacao, btnTabRedacao));
 if (btnTabLeitores) btnTabLeitores.addEventListener('click', () => alternarAbaResultado(abaResultadoLeitores, btnTabLeitores));
 
-// Quando clica no botão "Resultado Geral" no painel principal
-if (btnResultadoGeral) {
-    btnResultadoGeral.addEventListener('click', async () => {
-        modalResultado.style.display = 'flex';
+// ------------------------------------------------------------------
+// GATILHO GLOBAL: CLIQUE NO BOTÃO "RESULTADO GERAL"
+// ------------------------------------------------------------------
+document.addEventListener('click', async function(e) {
+    // Escuta o clique exatamente no botão #btn-resultado-geral
+    if (e.target && (e.target.id === 'btn-resultado-geral' || e.target.closest('#btn-resultado-geral'))) {
+        
+        if (modalResultado) {
+            modalResultado.style.display = 'flex'; // ABRE A JANELA!
+        }
         
         // Garante que, ao abrir, a aba "Torneio da Chave" seja a primeira a aparecer
         alternarAbaResultado(abaResultadoChave, btnTabChave);
         
         const containerResultados = document.getElementById('lista-resultados-container');
+        if (!containerResultados) return;
+        
         containerResultados.innerHTML = "<p style='text-align: center; color: #5c4033;'>⏳ Lendo os pergaminhos do tempo...</p>";
 
         try {
@@ -892,14 +1183,18 @@ if (btnResultadoGeral) {
             console.error("Erro ao carregar resultados:", error);
             containerResultados.innerHTML = "<p style='text-align: center; color: #8B0000;'>Falha ao invocar os resultados do banco de dados.</p>";
         }
+    }
+});
+
+// Fechamento do Modal no "X"
+if (btnFecharResultado) {
+    btnFecharResultado.addEventListener('click', () => {
+        if (modalResultado) {
+            modalResultado.style.display = 'none';
+        }
     });
 }
 
-if (btnFecharResultado) {
-    btnFecharResultado.addEventListener('click', () => {
-        modalResultado.style.display = 'none';
-    });
-}
 
 // ==========================================
 // 📜 FEITIÇO: EMISSÃO DO PERGAMINHO DE VITÓRIA (CERTIFICADO)
@@ -1819,35 +2114,10 @@ if (btnFecharReservaAluno) {
 }
 
 
-// ==========================================
-// 📝 ABERTURA DA GESTÃO DE EMPRÉSTIMOS (GESTÃO)
-// ==========================================
-const btnAbrirGestaoEmprestimos = document.getElementById('btn-abrir-gestao-emprestimos');
-const modalGestaoEmprestimos = document.getElementById('modal-gestao-emprestimos');
-const btnFecharGestaoEmprestimos = document.getElementById('fechar-gestao-emprestimos');
-
-// Abre a janela e invoca as listas atualizadas
-if (btnAbrirGestaoEmprestimos) {
-    btnAbrirGestaoEmprestimos.addEventListener('click', () => {
-        if (modalGestaoEmprestimos) modalGestaoEmprestimos.style.display = 'flex';
-        
-        // Puxa a lista de alunos aguardando aprovação
-        if (typeof carregarListasEmprestimos === "function") {
-            carregarListasEmprestimos();
-        }
-    });
-}
-
-// Fecha a janela no X
-if (btnFecharGestaoEmprestimos) {
-    btnFecharGestaoEmprestimos.addEventListener('click', () => {
-        if (modalGestaoEmprestimos) modalGestaoEmprestimos.style.display = 'none';
-    });
-}
 
 
 // ==========================================
-// 🪄 LÓGICA DE SOLICITAÇÃO DE EMPRÉSTIMO (ALUNO)
+// 🪄 LÓGICA DE SOLICITAÇÃO DE EMPRÉSTIMO (ALUNO) - COM ESCUDO DE CICLOS
 // ==========================================
 const btnConfirmarReserva = document.getElementById('btn-confirmar-reserva');
 
@@ -1871,6 +2141,7 @@ if (btnConfirmarReserva) {
         btnConfirmarReserva.disabled = true;
 
         try {
+            // 1. Busca os dados do Livro
             const qLivro = query(collection(db, "livros"), where("codigo", "==", codigo));
             const snapLivro = await getDocs(qLivro);
 
@@ -1884,6 +2155,7 @@ if (btnConfirmarReserva) {
             let livroDados = null;
             snapLivro.forEach(doc => { livroDados = doc.data(); });
 
+            // 2. Verifica se já está emprestado
             const qEmprestimo = query(
                 collection(db, "emprestimos"), 
                 where("codigoLivro", "==", codigo),
@@ -1898,31 +2170,69 @@ if (btnConfirmarReserva) {
                 return;
             }
 
+            // 3. Busca os dados do Usuário (para aplicar o Escudo de Ciclos)
             let nomeDoAluno = "Aluno Anónimo";
+            let nivelDoUsuario = "aluno";
+            let cicloDoUsuario = "F1";
+            
             const userDocRef = doc(db, "usuarios", usuarioAtual.uid);
             const userSnap = await getDoc(userDocRef);
             
-            if (userSnap.exists() && userSnap.data().nome) {
-                nomeDoAluno = userSnap.data().nome; 
+            if (userSnap.exists()) {
+                const dadosUser = userSnap.data();
+                if (dadosUser.nome) nomeDoAluno = dadosUser.nome; 
+                if (dadosUser.nivel) nivelDoUsuario = dadosUser.nivel.toLowerCase();
+                if (dadosUser.ciclo) cicloDoUsuario = dadosUser.ciclo.toUpperCase();
             }
 
-            await addDoc(collection(db, "emprestimos"), {
-                codigoLivro: codigo,
-                tituloLivro: livroDados.titulo,
-                alunoEmail: usuarioAtual.email,
-                nomeAluno: nomeDoAluno, 
-                dataSolicitacao: new Date().toISOString(),
-                dataDevolucao: "", 
-                status: "pendente", 
-                devolvido: false,
-                aprovadoPor: "" // Fica vazio até a Gestão aprovar
-            });
+            // ==========================================
+            // 🛡️ O ESCUDO MÁGICO DE EMPRÉSTIMOS (A HIERARQUIA)
+            // ==========================================
+            const cicloDoLivro = (livroDados.ciclo || "GERAL").toUpperCase();
+            let acessoNegado = false;
+
+            // Se NÃO for Gestão ou Admin, aplica as regras rigorosas
+            if (nivelDoUsuario !== "gestao" && nivelDoUsuario !== "adm") {
+                
+                // Regra F1: Não pode pegar F2 nem ME
+                if (cicloDoUsuario === "F1" && (cicloDoLivro === "F2" || cicloDoLivro === "ME")) {
+                    acessoNegado = true;
+                }
+                
+                // Regra F2: Não pode pegar ME
+                if (cicloDoUsuario === "F2" && cicloDoLivro === "ME") {
+                    acessoNegado = true;
+                }
+                
+                // (ME pode pegar tudo, então não tem regra que bloqueie ele).
+            }
+
+            if (acessoNegado) {
+                alert(`🛡️ O Escudo Mágico rejeitou o teu pedido!\n\nEsta Obra pertence ao ciclo [${cicloDoLivro}].\nO teu nível atual [${cicloDoUsuario}] ainda não te permite emprestar esta Obra.\n\nEsta Obra é destinada a alunos do Ensino Médio!`);
+                btnConfirmarReserva.innerHTML = textoOriginal;
+                btnConfirmarReserva.disabled = false;
+                return; // Interrompe o processo e NÃO empresta!
+            }
+
+
+// Se passou pelo Escudo, efetiva a reserva salvando o UID do usuário!
+await addDoc(collection(db, "emprestimos"), {
+    codigoLivro: codigo,
+    tituloLivro: livroDados.titulo,
+    alunoEmail: usuarioAtual.email,
+    emailAluno: usuarioAtual.email, // Garante compatibilidade de nome de campo
+    nomeAluno: nomeDoAluno,
+    uidAluno: usuarioAtual.uid,     // 📍 ESSENCIAL: Permite que o Perfil encontre a reserva!
+    dataSolicitacao: new Date().toISOString(),
+    dataDevolucao: "", 
+    status: "pendente", 
+    devolvido: false,
+    aprovadoPor: "" 
+});
 
             alert(`✨ Pedido selado com sucesso!\nSolicitaste a obra: "${livroDados.titulo}".\n\nAguarda a aprovação da Gestão para retirares o tomo físico.`);
             
-            // ==========================================
-            // 🔥 GATILHO DO LOG (Regista o pedido do aluno)
-            // ==========================================
+            // 🔥 GATILHO DO LOG
             if (typeof registrarLog === 'function') registrarLog(`Solicitou o empréstimo da obra: "${livroDados.titulo}" (Cód: ${codigo})`);
             
             inputCodigo.value = "";
@@ -1937,7 +2247,6 @@ if (btnConfirmarReserva) {
         btnConfirmarReserva.disabled = false;
     });
 }
-
 
 
 // ==========================================
@@ -1975,6 +2284,44 @@ function identificarGestor() {
 
 
 // ==========================================
+// ⚡ PREENCHER SUGESTÕES DE E-MAIL (AUTOCOMPLETAR)
+// ==========================================
+// Esta função lê os alunos e cria as opções que aparecem quando a Gestão digita uma letra
+async function preencherSugestoesAlunos() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "usuarios"));
+        
+        // Verifica se a lista (datalist) existe no HTML, se não, cria na memória e anexa ao body
+        let datalist = document.getElementById('lista-emails-alunos');
+        if (!datalist) {
+            datalist = document.createElement('datalist');
+            datalist.id = 'lista-emails-alunos';
+            document.body.appendChild(datalist);
+        }
+        
+        datalist.innerHTML = ""; // Limpa a lista antes de preencher
+        
+        querySnapshot.forEach((docSnap) => {
+            const usuario = docSnap.data();
+            if (usuario.email) {
+                // Cria a opção para cada e-mail cadastrado
+                const option = document.createElement('option');
+                option.value = usuario.email;
+                option.text = usuario.nome || "Aluno"; // Mostra o e-mail e sugere o nome
+                datalist.appendChild(option);
+            }
+        });
+    } catch (error) {
+        console.error("Erro ao carregar sugestões de alunos:", error);
+    }
+}
+
+// Chama a função para carregar a lista assim que a página terminar de montar
+document.addEventListener("DOMContentLoaded", () => {
+    preencherSugestoesAlunos();
+});
+
+// ==========================================
 // ⚡ LÓGICA DE EMPRÉSTIMO BALCÃO (PRESENCIAL)
 // ==========================================
 const btnEmprestarBalcao = document.getElementById('btn-emprestar-balcao');
@@ -1987,9 +2334,9 @@ if (btnEmprestarBalcao) {
         const emailAluno = inputEmail.value.trim().toLowerCase();
         
         // Puxa o nome real de quem está no comando agora!
-        const gestorAtual = identificarGestor();
+        const gestorAtual = typeof identificarGestor === 'function' ? identificarGestor() : 'Gestor(a)';
 
-        if (!/^\d{4}$/.test(codigo)) return alert("⚠️️ Código inválido. Use 4 dígitos numéricos.");
+        if (!/^\d{4}$/.test(codigo)) return alert("⚠ Código inválido. Use 4 dígitos numéricos.");
         if (!emailAluno || !emailAluno.includes('@')) return alert("⚠️ Digite um e-mail válido para o aluno.");
 
         try {
@@ -1998,11 +2345,39 @@ if (btnEmprestarBalcao) {
             if (snapLivro.empty) return alert("❌ Obra não encontrada no acervo.");
             
             let tituloLivro = "";
-            snapLivro.forEach(doc => { tituloLivro = doc.data().titulo; });
+            let cicloDoLivro = "GERAL"; // Pega o ciclo do livro para a trava
+            snapLivro.forEach(doc => { 
+                const dados = doc.data();
+                tituloLivro = dados.titulo; 
+                cicloDoLivro = dados.ciclo || "GERAL";
+            });
 
             const qEmprestimo = query(collection(db, "emprestimos"), where("codigoLivro", "==", codigo), where("devolvido", "==", false));
             const snapEmprestimo = await getDocs(qEmprestimo);
             if (!snapEmprestimo.empty) return alert("⚠️ Este livro já está emprestado ou reservado!");
+
+            // 🛡️ Opcional: Escudo do Balcão! Puxa o aluno para ver o nível dele (se F1, F2, ME)
+            const qAluno = query(collection(db, "usuarios"), where("email", "==", emailAluno));
+            const snapAluno = await getDocs(qAluno);
+            let nomeRealAluno = emailAluno.split('@')[0];
+            
+            if (!snapAluno.empty) {
+                 snapAluno.forEach(doc => {
+                     const alunoDados = doc.data();
+                     nomeRealAluno = alunoDados.nome || nomeRealAluno;
+                     const cicloAluno = alunoDados.ciclo || "F1";
+                     
+                     // Trava o gestor se ele tentar emprestar um livro ME para um aluno F1, por exemplo.
+                     if (cicloAluno === "F1" && (cicloDoLivro === "F2" || cicloDoLivro === "ME")) {
+                         alert(`🛡️ ATENÇÃO GESTÃO: O aluno ${nomeRealAluno} é do ciclo ${cicloAluno} e não pode levar este livro do ciclo ${cicloDoLivro}!`);
+                         throw new Error("Emprestimo bloqueado pelo escudo do balcao."); 
+                     }
+                     if (cicloAluno === "F2" && cicloDoLivro === "ME") {
+                         alert(`🛡️ ATENÇÃO GESTÃO: O aluno ${nomeRealAluno} é do ciclo ${cicloAluno} e não pode levar este livro do ciclo ${cicloDoLivro}!`);
+                         throw new Error("Emprestimo bloqueado pelo escudo do balcao.");
+                     }
+                 });
+            }
 
             const dias = prompt(`Quantos dias de empréstimo para "${tituloLivro}"?`, "7");
             if (!dias || isNaN(dias)) return alert("⚠️ Empréstimo cancelado. Prazo inválido.");
@@ -2015,7 +2390,7 @@ if (btnEmprestarBalcao) {
                 codigoLivro: codigo,
                 tituloLivro: tituloLivro,
                 alunoEmail: emailAluno,
-                nomeAluno: emailAluno.split('@')[0], 
+                nomeAluno: nomeRealAluno, // Salva o nome bonito e real do aluno 
                 dataSolicitacao: new Date().toISOString(),
                 dataDevolucao: dataFormatada,
                 status: "aprovado",
@@ -2025,7 +2400,7 @@ if (btnEmprestarBalcao) {
 
             // 🔥 GATILHO DO LOG (Empréstimo de Balcão)
             if (typeof registrarLog === 'function') {
-                registrarLog(`Emprestou no balcão a obra: "${tituloLivro}" para o aluno: ${emailAluno.split('@')[0]}`);
+                registrarLog(`Emprestou no balcão a obra: "${tituloLivro}" para o aluno: ${nomeRealAluno}`);
             }
 
             alert(`✅ Empréstimo de Balcão concluído!\nLivro liberado por: ${gestorAtual}`);
@@ -2035,11 +2410,12 @@ if (btnEmprestarBalcao) {
 
         } catch (error) {
             console.error(error);
-            alert("❌ Erro ao realizar o empréstimo de balcão.");
+            if(error.message !== "Emprestimo bloqueado pelo escudo do balcao.") {
+                 alert("❌ Erro ao realizar o empréstimo de balcão.");
+            }
         }
     });
 }
-
 
 
 // ==========================================
@@ -2050,6 +2426,18 @@ window.indexPendentes = 0;
 
 window.emprestimosAtivos = [];
 window.indexAtivos = 0;
+
+// ==========================================
+// 🪄 FEITIÇO DE CAPITALIZAÇÃO INTELIGENTE
+// ==========================================
+const formatarTextoEmprestimo = (texto) => {
+    if (!texto) return "";
+    const ignorar = ["de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", "o", "a", "os", "as"];
+    return texto.toLowerCase().split(" ").map((palavra, index) => {
+        if (index > 0 && ignorar.includes(palavra)) return palavra;
+        return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+    }).join(" ");
+};
 
 // ==========================================
 // 📋 GERENCIAR CARROSSEL (LÓGICA PRINCIPAL)
@@ -2073,6 +2461,10 @@ window.carregarListasEmprestimos = async function() {
         snapshot.forEach((docSnap) => {
             const emp = docSnap.data();
             emp.id = docSnap.id; // Salva o ID junto
+
+            // 🌟 APLICANDO O FEITIÇO AQUI LOGO QUE LÊ DO BANCO!
+            emp.tituloLivro = formatarTextoEmprestimo(emp.tituloLivro);
+            emp.nomeAluno = formatarTextoEmprestimo(emp.nomeAluno);
 
             if (emp.status === "pendente") {
                 window.pedidosPendentes.push(emp);
@@ -2121,6 +2513,9 @@ function renderizarPendentes() {
     contador.innerText = `${window.indexPendentes + 1} de ${total}`;
     const emp = window.pedidosPendentes[window.indexPendentes];
 
+    // Preparando o nome para a função de aprovar sem quebrar aspas simples
+    const tituloSeguro = emp.tituloLivro.replace(/'/g, "\\'");
+
     // 📏 AJUSTE: height: 100% para colar no topo e base da janela, fontes reduzidas e botões vazados.
     container.innerHTML = `
         <div style="width: 100%; height: 100%; display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; border-left: 6px solid #8B0000; box-shadow: 0 2px 6px rgba(0,0,0,0.05); box-sizing: border-box;">
@@ -2130,7 +2525,7 @@ function renderizarPendentes() {
             </div>
             <div style="display: flex; gap: 10px; min-width: 200px; justify-content: flex-end;">
                 <!-- BOTÃO APROVAR VAZADO -->
-                <button onclick="aprovarEmprestimo('${emp.id}', '${emp.tituloLivro}')" style="background: transparent; color: #8c6d46; border: 2px solid #8c6d46; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8c6d46'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#8c6d46'">✅ Aprovar</button>
+                <button onclick="aprovarEmprestimo('${emp.id}', '${tituloSeguro}')" style="background: transparent; color: #8c6d46; border: 2px solid #8c6d46; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8c6d46'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#8c6d46'">✅ Aprovar</button>
                 
                 <!-- BOTÃO RECUSAR VAZADO -->
                 <button onclick="rejeitarEmprestimo('${emp.id}')" style="background: transparent; color: #8B0000; border: 2px solid #8B0000; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8B0000'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#8B0000'">✖ Recusar</button>
@@ -2186,6 +2581,8 @@ function renderizarAtivos() {
         }
     }
 
+    const tituloSeguro = emp.tituloLivro.replace(/'/g, "\\'");
+
     container.innerHTML = `
         <div style="width: 100%; height: 100%; display: flex; justify-content: space-between; align-items: center; background-color: white !important; padding: 15px 20px; border-radius: 8px; border-left: 6px solid ${statusCor} !important; box-shadow: 0 2px 6px rgba(0,0,0,0.05); box-sizing: border-box;">
             <div style="flex: 1; padding-right: 20px; font-family: inherit;">
@@ -2200,12 +2597,11 @@ function renderizarAtivos() {
                 </div>
             </div>
             <div style="min-width: 160px; text-align: right;">
-                <button onclick="devolverEmprestimo('${emp.id}', '${emp.tituloLivro}')" style="background-color: transparent !important; color: #8c6d46 !important; border: 2px solid #8c6d46 !important; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 0.95rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8c6d46' !important; this.style.color='white' !important" onmouseout="this.style.backgroundColor='transparent' !important; this.style.color='#8c6d46' !important">📚 Receber</button>
+                <button onclick="devolverEmprestimo('${emp.id}', '${tituloSeguro}')" style="background-color: transparent !important; color: #8c6d46 !important; border: 2px solid #8c6d46 !important; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 0.95rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8c6d46' !important; this.style.color='white' !important" onmouseout="this.style.backgroundColor='transparent' !important; this.style.color='#8c6d46' !important">📚 Receber</button>
             </div>
         </div>
     `;
 }
-
 
 // ==========================================
 // 🖱️ CONTROLES DAS SETAS DO CARROSSEL
@@ -2291,90 +2687,38 @@ window.rejeitarEmprestimo = async function(id) {
 // 🦉 FEITIÇO DO CORREIO CORUJA (MENSAGEIRO MÁGICO)
 // ==========================================
 window.verificarAlertas = async function(emailUsuario, nivelUsuario) {
+    console.log("🕵️ MENSAGEIRO ACIONADO! Email:", emailUsuario, "| Nível recebido:", nivelUsuario);
+    
     if (!emailUsuario) return;
     
-    // 🛡️ BLINDAGEM DE SEGURANÇA: Normaliza o nível para minúsculas (evita que "Admin" ou "Gestão" sejam tratados como alunos)
     const nivel = nivelUsuario ? String(nivelUsuario).toLowerCase().trim() : "aluno";
     
-    // 1. CORUJA PARA GESTÃO E ADMINISTRAÇÃO
     if (nivel === "adm" || nivel === "admin" || nivel === "gestao" || nivel === "gestão" || nivel === "direcao" || nivel === "direção") {
-        try {
-            let htmlAlertasGestao = "";
-            let mostrarModalGestao = false;
-
-            // A. Verifica pedidos pendentes
-            const qGestao = query(collection(db, "emprestimos"), where("status", "==", "pendente"));
-            const snapGestao = await getDocs(qGestao);
-            
-            if (!snapGestao.empty) {
-                htmlAlertasGestao += `
-                    <div style="background-color: transparent !important; border: 2px solid #8c6d46 !important; padding: 15px; border-radius: 8px; border-left: 8px solid #8c6d46 !important; box-shadow: none !important; margin-bottom: 10px;">
-                        <strong style="color: #8c6d46 !important; font-size: 1.1rem;">🦉 Correio da Gestão</strong><br>
-                        <span style="font-size: 0.95rem; color: #333 !important;">Existem <strong>${snapGestao.size}</strong> pedido(s) aguardando avaliação no Painel de Operações.</span>
-                    </div>
-                `;
-                mostrarModalGestao = true;
-            }
-
-            // B. Calcula o Top 3 para informar a Gestão
-            const snapTodos = await getDocs(collection(db, "emprestimos"));
-            const contagem = {};
-            const nomes = {};
-            snapTodos.forEach(d => {
-                const e = d.data();
-                if(e.status !== "rejeitado" && e.alunoEmail) {
-                    const mail = e.alunoEmail.toLowerCase();
-                    contagem[mail] = (contagem[mail] || 0) + 1;
-                    nomes[mail] = typeof capitalizar === 'function' ? capitalizar(e.nomeAluno || mail.split('@')[0]) : (e.nomeAluno || mail.split('@')[0]);
-                }
-            });
-            
-            const ranking = Object.keys(contagem).sort((a,b) => contagem[b] - contagem[a]);
-            const top3 = ranking.slice(0, 3);
-            
-            // Verifica se a Gestão já ocultou o aviso de pódio HOJE
-            const hojeStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-            const avisoGestaoOculto = localStorage.getItem('gestao_podio_oculto_' + hojeStr);
-
-            if (top3.length > 0 && !avisoGestaoOculto) {
-                let textoGanhadores = "";
-                if(top3[0]) textoGanhadores += `<strong>🥇 1º</strong> ${nomes[top3[0]]} (${contagem[top3[0]]} ${contagem[top3[0]] === 1 ? 'obra' : 'obras'})<br>`;
-                if(top3[1]) textoGanhadores += `<strong>🥈 2º</strong> ${nomes[top3[1]]} (${contagem[top3[1]]} ${contagem[top3[1]] === 1 ? 'obra' : 'obras'})<br>`;
-                if(top3[2]) textoGanhadores += `<strong>🥉 3º</strong> ${nomes[top3[2]]} (${contagem[top3[2]]} ${contagem[top3[2]] === 1 ? 'obra' : 'obras'})`;
-
-                htmlAlertasGestao = `
-                    <div style="background-color: transparent !important; border: 2px solid #FFD700 !important; padding: 15px; border-radius: 8px; border-left: 8px solid #FFD700 !important; box-shadow: none !important; margin-bottom: 15px;">
-                        <strong style="color: #B8860B !important; font-size: 1.1rem;">🏆 Resumo do Pódio Atual</strong><br>
-                        <span style="font-size: 0.95rem; color: #333 !important; display: inline-block; margin-top: 8px; line-height: 1.6;">
-                            Estes são os líderes de leitura do Colégio no momento:<br>
-                            ${textoGanhadores}<br>
-                            <em style="color: #5c4033; font-size: 0.85rem; display: block; margin-top: 8px;">Acesse a Câmara do Sistema para emitir os Diplomas.</em>
-                        </span>
-                        <div style="margin-top: 12px; text-align: right;">
-                            <button onclick="ocultarAvisoPodioGestao('${hojeStr}')" style="background-color: #B8860B; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s;" onmouseover="this.style.backgroundColor='#8c6d46'" onmouseout="this.style.backgroundColor='#B8860B'">
-                                👁️ Ocultar Relatório Hoje
-                            </button>
-                        </div>
-                    </div>
-                ` + htmlAlertasGestao;
-                mostrarModalGestao = true;
-            }
-
-            // Exibe a janela para a Gestão
-            if (mostrarModalGestao && htmlAlertasGestao !== "") {
-                document.getElementById('conteudo-alertas-aluno').innerHTML = htmlAlertasGestao;
-                document.getElementById('modal-alertas-aluno').style.display = 'flex';
-            }
-        } catch (error) { console.error("Erro na Coruja da Gestão:", error); }
-        
-        return; // ⛔ MURALHA DE FOGO: Daqui para baixo, a Gestão não passa!
+        console.log("✅ É da Gestão! Redirecionando para invocarMesaDaGestao...");
+        invocarMesaDaGestao();
+        return; 
     }
 
     // ========================================================
     // 2. CORUJA PARA ALUNOS (Recados Normais e Atrasos)
     // ========================================================
     try {
+        // Restaura os textos originais do Modal para o Aluno (caso a gestão tenha usado a tela antes)
+        const modal = document.getElementById('modal-alertas-aluno');
+        if (modal) {
+            const tituloModal = modal.querySelector('h2');
+            const descModal = modal.querySelector('p');
+            if (tituloModal) tituloModal.innerHTML = '🦉 Correio Coruja';
+            if (descModal) descModal.innerHTML = 'Aqui estão os seus avisos mágicos de empréstimo:';
+        }
+
         const qAluno = query(collection(db, "emprestimos"), where("alunoEmail", "==", emailUsuario), where("devolvido", "==", false));
+        // ... (O restante da função do aluno continua exatamente igual a partir daqui!)
+
+
+
+
+
         const snapshot = await getDocs(qAluno);
         
         let htmlAlertas = "";
@@ -2434,7 +2778,7 @@ window.verificarAlertas = async function(emailUsuario, nivelUsuario) {
             });
         }
 
-        // ========================================================
+// ========================================================
         // 🥇 3. CORUJA DE OURO: AVISO DE PÓDIO (SÓ ALUNOS!)
         // ========================================================
         try {
@@ -2470,7 +2814,14 @@ window.verificarAlertas = async function(emailUsuario, nivelUsuario) {
 
         if (mostrarModal && htmlAlertas !== "") {
             document.getElementById('conteudo-alertas-aluno').innerHTML = htmlAlertas;
-            document.getElementById('modal-alertas-aluno').style.display = 'flex';
+            
+            // ESCUDO DEFINITIVO: O livro deve estar aberto E o usuário tem que ser obrigatoriamente um ALUNO!
+            const painelAberto = document.getElementById('painel-principal').style.display !== 'none';
+            const ehAluno = window.usuarioNivelAtual === 'aluno';
+            
+            if (painelAberto && ehAluno) {
+                document.getElementById('modal-alertas-aluno').style.display = 'flex';
+            }
         }
 
     } catch (error) { console.error("Erro Coruja Aluno:", error); }
@@ -2499,13 +2850,47 @@ window.dispensarCoruja = async function(docId) {
 
 
 
-// 🪄 AUTO-INVOCAÇÃO INTELIGENTE
-auth.onAuthStateChanged((user) => {
+// ==========================================
+// 🪄 AUTO-INVOCAÇÃO INTELIGENTE (O FANTASMA SÁBIO)
+// ==========================================
+auth.onAuthStateChanged(async (user) => {
     if (user && user.email) {
-        setTimeout(() => { 
-            const nivelLimpo = window.usuarioNivelAtual ? String(window.usuarioNivelAtual).toLowerCase().trim() : "aluno";
-            verificarAlertas(user.email, nivelLimpo); 
-        }, 1500);
+        
+        try {
+            // 1. O Fantasma vai pessoalmente ao banco de dados verificar QUEM É o usuário
+            const docRef = doc(db, "usuarios", user.uid);
+            const docSnap = await getDoc(docRef);
+            
+            let nivelReal = "aluno"; // Padrão
+            
+            // 2. Lê a informação oficial
+            if (docSnap.exists()) {
+                const dados = docSnap.data();
+                nivelReal = dados.nivel || dados.cargo || "aluno";
+            }
+            
+            // Tratamento especial para a conta JR (se não estiver na coleção usuarios)
+            if (user.email.toUpperCase() === "JR@OBJETIVORE.EDU" || user.email.toUpperCase() === "JR") {
+                nivelReal = "adm";
+            }
+
+            // Normaliza o texto (tudo minúsculo para não ter erro)
+            nivelReal = String(nivelReal).toLowerCase().trim();
+            
+            // 3. Agora sim, com certeza absoluta, ele espera 1.5s e abre a tela correta!
+            setTimeout(() => { 
+                if (nivelReal === "gestao" || nivelReal === "adm" || nivelReal === "admin") {
+                    console.log("✅ O Fantasma confirmou: É da GESTÃO! Abrindo Mesa...");
+                    invocarMesaDaGestao(); 
+                } else {
+                    console.log("✅ O Fantasma confirmou: É ALUNO! Abrindo Coruja...");
+                    verificarAlertas(user.email, nivelReal); 
+                }
+            }, 1500);
+
+        } catch (error) {
+            console.error("❌ O Fantasma falhou ao buscar a identidade:", error);
+        }
     }
 });
 
@@ -3317,7 +3702,7 @@ window.carregarTopLeitores = async function() {
     const container = document.getElementById('podio-leitores-container');
     if(!container) return;
     
-    container.innerHTML = '<p style="color: #8c6d46; font-style: italic; margin-top: 50px;">⏳ Invocando os registos mágicos de leitura...</p>';
+    container.innerHTML = '<p style="color: #8c6d46; font-style: italic; margin-top: 50px;">⏳ Acessando os registos mágicos de leitura...</p>';
     
     try {
         const querySnapshot = await getDocs(collection(db, "emprestimos"));
@@ -3755,3 +4140,408 @@ window.carregarNomeCiclo = async function() {
         spanNome.innerHTML = "⭐ Temporada Atual ⭐";
     }
 };
+
+
+function alternarAbaGestao(nomeAba) {
+    // 1. Esconde todos os contêineres de abas
+    const conteudos = document.querySelectorAll('.aba-item-gestao');
+    conteudos.forEach(item => item.style.display = 'none');
+
+    // 2. Reseta o visual dos botões
+    const botoes = document.querySelectorAll('.btn-aba-gestao');
+    botoes.forEach(btn => {
+        btn.style.background = '#d2b48c';
+        btn.style.color = '#333';
+        btn.classList.remove('ativa');
+    });
+
+    // 3. Exibe a aba clicada
+    const abaSelecionada = document.getElementById(`aba-conteudo-${nomeAba}`);
+    if (abaSelecionada) {
+        abaSelecionada.style.display = 'block';
+    }
+
+    // 4. Destaca o botão selecionado
+    const btnAtivo = document.querySelector(`.btn-aba-gestao[data-aba="${nomeAba}"]`);
+    if (btnAtivo) {
+        btnAtivo.style.background = '#8B0000';
+        btnAtivo.style.color = '#fff';
+        btnAtivo.classList.add('ativa');
+    }
+
+    // 5. CHAMA AS FUNÇÕES DE CARREGAMENTO ESPECÍFICAS DE CADA FERRAMENTA
+    // (Ajuste os nomes das funções abaixo para os nomes reais das suas funções caso sejam diferentes)
+    if (nomeAba === 'acervo') {
+        if (typeof carregarObrasGestao === 'function') carregarObrasGestao();
+        else if (typeof renderizarListaGestao === 'function') renderizarListaGestao();
+    } else if (nomeAba === 'emprestimos') {
+        if (typeof carregarEmprestimos === 'function') carregarEmprestimos();
+    } else if (nomeAba === 'etiquetas') {
+        if (typeof carregarEtiquetas === 'function') carregarEtiquetas();
+    } else if (nomeAba === 'concurso') {
+        if (typeof carregarConcurso === 'function') carregarConcurso();
+    } else if (nomeAba === 'moderacao') {
+        if (typeof carregarModeracao === 'function') carregarModeracao();
+    }
+}
+
+function abrirModalGestao() {
+    const modal = document.getElementById('modal-gestao');
+    if (modal) {
+        modal.style.display = 'flex';
+        alternarAbaGestao('acervo'); // Abre na primeira aba
+    }
+}
+
+function fecharModalGestao() {
+    const modal = document.getElementById('modal-gestao');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+
+
+function trocarAbaSimple(nomeAba) {
+    // 1. Esconde todos os conteúdos de abas
+    var containers = document.querySelectorAll('.item-aba-conteudo');
+    containers.forEach(function(el) {
+        el.style.display = 'none';
+    });
+
+    // 2. Reseta o estilo dos botões das abas
+    var botoes = document.querySelectorAll('.btn-aba-gestao');
+    botoes.forEach(function(btn) {
+        btn.style.background = '#d2b48c';
+        btn.style.color = '#333';
+        btn.classList.remove('ativa');
+    });
+
+    // 3. Mostra a aba selecionada
+    var abaAlvo = document.getElementById('aba-' + nomeAba);
+    if (abaAlvo) {
+        abaAlvo.style.display = 'block';
+    }
+
+    // 4. Destaca o botão selecionado
+    var btnAtivo = document.querySelector('.btn-aba-gestao[data-aba="' + nomeAba + '"]');
+    if (btnAtivo) {
+        btnAtivo.style.background = '#8B0000';
+        btnAtivo.style.color = '#fff';
+        btnAtivo.classList.add('ativa');
+    }
+
+    // 5. 📍 Se clicou na aba Empréstimos, recarrega os carrosséis e a lista de e-mails!
+    if (nomeAba === 'emprestimos') {
+        if (typeof carregarListasEmprestimos === 'function') {
+            carregarListasEmprestimos();
+        }
+        if (typeof carregarListaEmailsAlunos === 'function') {
+            carregarListaEmailsAlunos();
+        }
+    }
+}
+
+
+// Função para carregar e atualizar os e-mails dos alunos no Datalist
+async function carregarListaEmailsAlunos() {
+    const datalist = document.getElementById('lista-emails-alunos');
+    if (!datalist) return;
+
+    try {
+        // Limpa as opções antigas
+        datalist.innerHTML = '';
+
+        // Busca todos os usuários cadastrados diretamente do banco
+        const snapUsuarios = await getDocs(collection(db, "usuarios"));
+
+        snapUsuarios.forEach(docSnap => {
+            const dados = docSnap.data();
+            if (dados.email) {
+                const option = document.createElement('option');
+                option.value = dados.email;
+                if (dados.nome) {
+                    option.label = `${dados.nome}`;
+                }
+                datalist.appendChild(option);
+            }
+        });
+    } catch (error) {
+        console.error("Erro ao recarregar e-mails dos alunos:", error);
+    }
+}
+
+
+// ==========================================
+// 🏷️ FÁBRICA DE ETIQUETAS (GERADOR VISUAL)
+// ==========================================
+let cacheEtiquetasGestao = []; // Memória temporária para busca rápida
+
+// 1. Busca os livros no acervo e organiza
+async function carregarAcervoParaEtiquetas() {
+    const grade = document.getElementById('grade-etiquetas-preview');
+    const btnCarregar = document.getElementById('btn-carregar-todas-etiquetas');
+    
+    if (!grade) return;
+    
+    const textoOriginal = btnCarregar.innerText;
+    btnCarregar.innerText = "⏳ Buscando Livros...";
+    btnCarregar.disabled = true;
+    grade.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #8c6d46; font-weight: bold;">Puxando livros das prateleiras mágicas...</p>';
+
+    try {
+        // AQUI ESTAVA O SEGREDO: O NOME CORRETO DA COLEÇÃO É "livros"
+        const snapAcervo = await getDocs(collection(db, "livros"));
+        cacheEtiquetasGestao = [];
+        
+        snapAcervo.forEach((docSnap) => {
+            const livro = docSnap.data();
+            cacheEtiquetasGestao.push({
+                codigo: livro.codigo || "0000",
+                titulo: livro.titulo || "Obra sem título",
+                genero: livro.categoria || "Geral", // Aqui puxamos do seu campo 'categoria'
+                ciclo: livro.ciclo || "F1" 
+            });
+        });
+        
+        // Organiza em ordem alfabética de título
+        cacheEtiquetasGestao.sort((a, b) => a.titulo.localeCompare(b.titulo));
+        
+        renderizarEtiquetasNaGrade(cacheEtiquetasGestao);
+        
+    } catch (error) {
+        console.error("Erro ao buscar acervo para etiquetas:", error);
+        grade.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: red;">Erro ao carregar o acervo. Verifique sua conexão.</p>';
+    } finally {
+        btnCarregar.innerText = textoOriginal;
+        btnCarregar.disabled = false;
+    }
+}
+
+
+// 2. Desenha os cartõezinhos na tela
+function renderizarEtiquetasNaGrade(lista) {
+    const grade = document.getElementById('grade-etiquetas-preview');
+    const chkTodas = document.getElementById('chk-selecionar-todas-etiquetas');
+    
+    grade.innerHTML = "";
+    if(chkTodas) chkTodas.checked = false;
+    atualizarContadorEtiquetas();
+
+    if (lista.length === 0) {
+        grade.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #8c6d46;">Nenhum livro encontrado.</p>';
+        return;
+    }
+
+    lista.forEach((livro) => {
+        // Cores estratégicas para os ciclos
+        let corCiclo = "#2E7D32"; // F1 = Verde Esmeralda
+        if (livro.ciclo === "F2") corCiclo = "#1565C0"; // F2 = Azul Royal
+        if (livro.ciclo === "ME") corCiclo = "#8B0000"; // ME = Vermelho Bordô
+
+        // MÁGICA DO CATÁLOGO: Respeita a regra de capitalização original do seu sistema!
+        const tituloFormatado = typeof capitalizar === 'function' ? capitalizar(livro.titulo) : livro.titulo;
+        const generoFormatado = typeof capitalizar === 'function' ? capitalizar(livro.genero) : livro.genero;
+
+        const divEtiqueta = document.createElement('div');
+        divEtiqueta.style.cssText = `border: 2px solid ${corCiclo}; border-radius: 6px; padding: 10px; background: white; text-align: center; position: relative; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: center;`;
+        
+        divEtiqueta.innerHTML = `
+            <input type="checkbox" class="chk-etiqueta-individual" value="${livro.codigo}" data-ciclo="${livro.ciclo}" data-titulo="${tituloFormatado}" data-genero="${generoFormatado}" style="position: absolute; top: 8px; left: 8px; transform: scale(1.3); cursor: pointer;">
+            <div style="background-color: ${corCiclo}; color: white; font-weight: bold; font-size: 0.8rem; padding: 2px 6px; border-radius: 4px; display: inline-block; align-self: flex-end; margin-bottom: 5px;">${livro.ciclo}</div>
+            <div style="font-size: 1.3rem; font-weight: 900; color: #333; letter-spacing: 1px; margin: 2px 0;">${livro.codigo}</div>
+            <div style="font-size: 0.75rem; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 5px;" title="${tituloFormatado}">${tituloFormatado}</div>
+            <div style="font-size: 0.65rem; color: #8c6d46; margin-top: 3px; font-weight: bold;">${generoFormatado}</div>
+        `;
+
+        // Clicar no cartãozinho marca a caixinha
+        divEtiqueta.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'INPUT') {
+                const chk = divEtiqueta.querySelector('.chk-etiqueta-individual');
+                chk.checked = !chk.checked;
+                atualizarContadorEtiquetas();
+            }
+        });
+
+        const chk = divEtiqueta.querySelector('.chk-etiqueta-individual');
+        chk.addEventListener('change', atualizarContadorEtiquetas);
+
+        grade.appendChild(divEtiqueta);
+    });
+}
+
+
+// 3. Atualiza aquele contador "X prontas para impressão"
+function atualizarContadorEtiquetas() {
+    const marcadas = document.querySelectorAll('.chk-etiqueta-individual:checked').length;
+    const contador = document.getElementById('contador-etiquetas-selecionadas');
+    if (contador) contador.innerText = `${marcadas} prontas para impressão`;
+}
+
+// 4. Liga o botão de carregar ao clique
+document.getElementById('btn-carregar-todas-etiquetas')?.addEventListener('click', carregarAcervoParaEtiquetas);
+
+
+// 5. A Mágica da Busca (Filtra enquanto você digita)
+document.getElementById('input-busca-etiqueta')?.addEventListener('input', (e) => {
+    const termo = e.target.value.toLowerCase().trim();
+    
+    // Se a caixa ficar vazia, mostra todos os livros novamente
+    if (termo === "") {
+        renderizarEtiquetasNaGrade(cacheEtiquetasGestao);
+        return;
+    }
+
+    // Filtra procurando pelo título ou pelo código exato
+    const listaFiltrada = cacheEtiquetasGestao.filter(livro => {
+        return livro.titulo.toLowerCase().includes(termo) || 
+               livro.codigo.toLowerCase().includes(termo);
+    });
+
+    renderizarEtiquetasNaGrade(listaFiltrada);
+});
+
+// 6. O Controle Mestre: Marcar/Desmarcar Todas
+document.getElementById('chk-selecionar-todas-etiquetas')?.addEventListener('change', (e) => {
+    const marcarTudo = e.target.checked;
+    const checkboxes = document.querySelectorAll('.chk-etiqueta-individual');
+    
+    checkboxes.forEach(chk => chk.checked = marcarTudo);
+    atualizarContadorEtiquetas();
+});
+
+
+// ==========================================
+// 🖨️ 7. A MÁGICA DA IMPRESSÃO (O GRANDE FINALE)
+// ==========================================
+document.getElementById('btn-imprimir-etiquetas')?.addEventListener('click', () => {
+    const marcadas = document.querySelectorAll('.chk-etiqueta-individual:checked');
+    
+    if (marcadas.length === 0) {
+        alert("Atenção: A impressora mágica precisa de pelo menos uma etiqueta selecionada para trabalhar!");
+        return;
+    }
+
+    // Cria a janela de impressão limpa
+    const janelaImpressao = window.open('', '_blank', 'width=900,height=700');
+    if (!janelaImpressao) {
+        alert("O seu navegador bloqueou a janela. Permita os pop-ups para imprimir as etiquetas!");
+        return;
+    }
+
+    // Constrói os cartões limpos, sem a caixinha de marcar
+    let htmlEtiquetas = '';
+    marcadas.forEach(chk => {
+        const codigo = chk.value;
+        const ciclo = chk.getAttribute('data-ciclo');
+        const titulo = chk.getAttribute('data-titulo');
+        const genero = chk.getAttribute('data-genero');
+
+        let corCiclo = "#2E7D32"; // F1 = Verde
+        if (ciclo === "F2") corCiclo = "#1565C0"; // F2 = Azul
+        if (ciclo === "ME") corCiclo = "#8B0000"; // ME = Vermelho
+
+        htmlEtiquetas += `
+            <div class="etiqueta-impressa" style="border-color: ${corCiclo};">
+                <div class="ciclo-badge" style="background-color: ${corCiclo};">${ciclo}</div>
+                <div class="codigo-txt">${codigo}</div>
+                <div class="titulo-txt">${titulo}</div>
+                <div class="genero-txt">${genero}</div>
+            </div>
+        `;
+    });
+
+    // O Documento Mágico (HTML e CSS de Impressão)
+    const docHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Etiquetas_Colegio_GP</title>
+            <style>
+                /* Força a impressora a não economizar e pintar as cores de fundo */
+                * {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 15px;
+                }
+                .grade-impressao {
+                    display: grid;
+                    /* 3 etiquetas por linha no papel A4 */
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 15px;
+                }
+                .etiqueta-impressa {
+                    border: 2px solid;
+                    border-radius: 8px;
+                    padding: 15px;
+                    text-align: center;
+                    position: relative;
+                    height: 120px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    box-sizing: border-box;
+                    page-break-inside: avoid; /* Evita que a etiqueta corte no meio da página */
+                }
+                .ciclo-badge {
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 0.9rem;
+                    padding: 3px 8px;
+                    border-radius: 4px;
+                }
+                .codigo-txt {
+                    font-size: 1.8rem;
+                    font-weight: 900;
+                    color: #333;
+                    letter-spacing: 2px;
+                    margin-bottom: 5px;
+                    margin-top: 15px;
+                }
+                .titulo-txt {
+                    font-size: 0.85rem;
+                    color: #444;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .genero-txt {
+                    font-size: 0.75rem;
+                    color: #8c6d46;
+                    margin-top: 5px;
+                    font-weight: bold;
+                }
+                @media print {
+                    @page { margin: 10mm; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="grade-impressao">
+                ${htmlEtiquetas}
+            </div>
+            <script>
+                // Assim que a janela carregar, chama a impressora e fecha a aba sozinha!
+                window.onload = function() {
+                    setTimeout(() => {
+                        window.print();
+                        window.close();
+                    }, 500);
+                };
+            </script>
+        </body>
+        </html>
+    `;
+
+    // Escreve o documento fantasma e dispara a ação
+    janelaImpressao.document.open();
+    janelaImpressao.document.write(docHTML);
+    janelaImpressao.document.close();
+});
