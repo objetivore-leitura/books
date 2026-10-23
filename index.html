@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">        
+    <title>Biblioteca Objetivo Lê</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    
+<!-- ESTILOS MÁGICOS PARA O CELULAR (Adaptação da Capa) -->
+    <style>
+        /* Oculta os botões de virar a página no Computador */
+        .btn-alternar-login {
+            display: none;
+            background: none;
+            border: none;
+            color: #8B0000;
+            font-weight: bold;
+            text-decoration: underline;
+            cursor: pointer;
+            margin-top: 25px;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        /* Regras apenas para telas pequenas (Celular) */
+        @media (max-width: 768px) {
+            .btn-alternar-login {
+                display: block; /* Faz os botões aparecerem */
+                margin-left: auto;
+                margin-right: auto;
+            }
+            
+            /* Esconde a Gestão por padrão no celular */
+            #livro-aberto-container .pagina-esquerda {
+                display: none !important;
+            }
+            /* A página do Aluno ocupa 100% da tela */
+            #livro-aberto-container .pagina-direita {
+                display: flex !important;
+                width: 100% !important;
+            }
+
+            /* Quando a Gestão ativar o feitiço de virar a página... */
+            #livro-aberto-container.ver-gestao .pagina-esquerda {
+                display: flex !important;
+                width: 100% !important;
+            }
+            #livro-aberto-container.ver-gestao .pagina-direita {
+                display: none !important;
+            }
+        }
+    </style>
+
+    <!-- CAPA DO LIVRO FECHADA -->
+    <div id="capa-container">
+        <div class="borda-dourada"></div>
+        <h1>Biblioteca<br>Objetivo Lê</h1>
+        <div class="selo-magico" id="btn-abrir-livro" title="Rompam o lacre!">H</div>         
+    </div>
+
+    <!-- LIVRO ABERTO (LOGIN) -->
+    <div id="livro-aberto-container">
+        
+        <div class="pagina pagina-esquerda">
+            <h2>Gestão (Colégio)</h2>
+            <input type="email" id="colegio-email" class="input-tinta" placeholder="E-mail Administrativo"> 
+            <input type="password" id="colegio-senha" class="input-tinta" placeholder="Palavra-passe">
+            <button class="btn-3d" id="btn-login-colegio">Entrar no Acervo</button>
+            
+            <!-- Botão só visível no celular para voltar ao aluno -->
+            <button class="btn-alternar-login" onclick="document.getElementById('livro-aberto-container').classList.remove('ver-gestao')">
+                ⬅️ Voltar para Estudantes
+            </button>
+        </div>
+
+        <div class="pagina pagina-direita">
+            <h2>Estudantes (Alunos)</h2>
+            <input type="email" id="aluno-email" class="input-tinta" placeholder="E-mail do Estudante">
+            <input type="password" id="aluno-senha" class="input-tinta" placeholder="Palavra-passe">
+            <button class="btn-3d" id="btn-login-aluno">Consultar Biblioteca</button>
+            
+            <!-- Botão só visível no celular para aceder à gestão -->
+            <button class="btn-alternar-login" onclick="document.getElementById('livro-aberto-container').classList.add('ver-gestao')">
+                🗝️ Acesso da Gestão
+            </button>
+        </div>
+        
+    </div>
+
+    <!-- PAINEL PRINCIPAL DO ACERVO (AGORA COM FLEX-DIRECTION COLUMN) -->
+    <div id="painel-principal" style="display: none; flex-direction: column; width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px;">
+        
+        <header style="text-align: center; color: var(--texto-dourado); border-bottom: 2px solid var(--texto-dourado); padding-bottom: 10px; margin-bottom: 30px;">
+            <h1 style="font-size: 2.5rem; margin: 0; text-transform: uppercase; letter-spacing: 2px;">Acervo Objetivo Lê</h1>
+        </header>
+
+        <!-- Controles da Gestão -->
+        <div id="controles-gestao" style="display: none; justify-content: center; margin-bottom: 20px; width: 100%;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 950px; width: 100%; margin-left: auto; margin-right: auto;">
+                <button class="btn-3d btn-esmeralda" id="btn-novo-livro" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box;">+ Adicionar Livro</button>
+                
+                <!-- BOTÃO RESULTADO GERAL CONSERTADO -->
+                <button type="button" class="btn-3d btn-rubi" id="btn-resultado-geral" onclick="abrirResultadoGeral()" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; cursor: pointer;">🏆 Resultado Geral</button>
+                
+                <button class="btn-3d btn-safira" id="btn-novo-usuario" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box;">🧙‍♂️ Cadastrar Membro</button>
+                <button class="btn-bronze" id="btn-abrir-gestao" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box;">🗝️ Espaço da Gestão</button>
+                <button class="btn-petroleo" id="btn-config-geral" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box;">⚙️ Configuração Geral</button>
+                <button class="btn-musgo" id="btn-aba-relatorios" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box;">⏳ Relatórios</button>
+            </div>
+        </div>
+
+        <!-- 🪄 ESTILOS MÁGICOS PARA O CELULAR (Acervo e Estante) -->
+        <style>
+            @media (max-width: 768px) {
+                .grade-magica { gap: 8px !important; }
+                .grade-magica button, .grade-magica input { font-size: 0.85rem !important; }
+                #estante-estatica { width: 92% !important; margin-left: auto !important; margin-right: auto !important; border-width: 3px !important; }
+            }
+        </style>
+
+        <!-- O Novo Acervo Mágico -->
+        <div id="acervo-magico-container" style="text-align: center; margin-top: 10px;">
+            
+            <div id="menu-aluno-top" style="display: none; justify-content: center; margin-bottom: 15px; width: 100%;">
+                <div class="grade-magica" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 950px; width: 100%; margin-left: auto; margin-right: auto;">
+                    <button class="btn-3d" id="btn-config-aluno" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; background: linear-gradient(to bottom, #11281a 0%, #0c1a11 100%); color: #daa520; border: 2px solid #8c6d46; border-radius: 8px; font-size: 0.95rem; font-weight: bold; text-transform: uppercase; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-family: inherit; padding: 0;">⚙️SENHAS </button>
+                    <button class="btn-3d" id="btn-solicitar-emprestimo" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; background: linear-gradient(to bottom, #1a3a5a 0%, #0d1d2d 100%); color: #daa520; border: 2px solid #8c6d46; border-radius: 8px; font-size: 0.95rem; font-weight: bold; text-transform: uppercase; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-family: inherit; padding: 0;">📖 RESERVAS</button>
+                    <button class="btn-3d" id="btn-provisorio-2" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; background: linear-gradient(to bottom, #2d0f0f 0%, #1c0a0a 100%); color: #daa520; border: 2px solid #8c6d46; border-radius: 8px; font-size: 0.95rem; font-weight: bold; text-transform: uppercase; cursor: not-allowed; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-family: inherit; padding: 0; opacity: 0.7;">🚧 BREVE</button>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: center; margin-bottom: 15px; width: 100%;">
+                <div class="grade-magica" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 950px; width: 100%; margin-left: auto; margin-right: auto;">
+                    <button class="btn-3d btn-ametista" id="btn-invocar-tomo" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box;">✨ OBRAS</button>
+                    <input type="text" id="input-busca-codigo" placeholder="Código" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; text-align: center; font-size: 1.1rem; border: 2px solid #8B0000; border-radius: 8px; background-color: rgba(20, 10, 5, 0.8); color: var(--cor-pergaminho); font-style: italic; box-shadow: 0 4px 8px rgba(0,0,0,0.5); outline: none;">
+                    <button class="btn-3d btn-ambar" id="btn-abrir-catalogo" style="height: 50px; width: 100%; margin: 0; box-sizing: border-box; box-shadow: none; transform: none; border-bottom-width: 2px;">📜 CATÁLOGO</button>
+                </div>
+            </div>
+            
+            <p id="contador-livros" style="color: var(--cor-pergaminho); font-style: italic; margin-top: 15px; margin-bottom: 15px; font-size: 1rem; text-align: center; width: 100%; text-shadow: 0 0 5px rgba(255, 248, 220, 0.5);"></p>
+        </div>
+
+        <!-- A Estante Estática Decorativa -->
+        <div id="estante-estatica" style="width: 100%; height: 260px; background: linear-gradient(to bottom, #0f0805 0%, #2a1610 70%, #4a2f24 100%); border: 4px solid #8c6d46; border-radius: 10px; box-shadow: inset 0 0 50px rgba(0,0,0,0.9), 0 10px 20px rgba(0,0,0,0.8); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 15px; gap: 10px; overflow: hidden; position: relative;">
+            <div style="position: absolute; top: -50px; left: 50%; transform: translateX(-50%); width: 250px; height: 250px; background: radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%); border-radius: 50%;"></div>
+
+            <!-- Tomo 1: CONTOS -->
+            <div style="width: 45px; height: 160px; background: linear-gradient(to right, #4a0000 0%, #8b0000 20%, #8b0000 80%, #4a0000 100%); border: 2px solid #daa520; border-radius: 4px 2px 2px 4px; box-shadow: 5px 0 15px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px 0; z-index: 10;">
+                <div style="width: 70%; height: 2px; background-color: #daa520;"></div>
+                <div style="color: #daa520; writing-mode: vertical-rl; text-orientation: mixed; font-weight: bold; font-family: 'Times New Roman', serif; letter-spacing: 2px; font-size: 0.85rem; text-shadow: 1px 1px 2px #000; transform: rotate(180deg);">CONTOS</div>
+                <div style="width: 70%; height: 2px; background-color: #daa520;"></div>
+            </div>
+
+            <!-- NOVO Tomo 7: ESPERANÇA -->
+            <div style="width: 48px; height: 180px; background: linear-gradient(to right, #113311 0%, #228b22 20%, #228b22 80%, #113311 100%); border: 2px solid #cd853f; border-radius: 4px 2px 2px 4px; box-shadow: 5px 0 15px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 15px 0; z-index: 10;">
+                <div style="width: 80%; height: 6px; background: repeating-linear-gradient(to right, #cd853f, #cd853f 2px, transparent 2px, transparent 4px);"></div>
+                <div style="color: #cd853f; writing-mode: vertical-rl; text-orientation: mixed; font-weight: bold; font-family: 'Times New Roman', serif; letter-spacing: 2px; font-size: 0.9rem; text-shadow: 1px 1px 2px #000; transform: rotate(180deg);">ESPERANÇA</div>
+                <div style="width: 80%; height: 6px; background: repeating-linear-gradient(to right, #cd853f, #cd853f 2px, transparent 2px, transparent 4px);"></div>
+            </div>
+
+            <!-- Tomo 2: ENCANTOS -->
+            <div style="width: 50px; height: 190px; background: linear-gradient(to right, #002b11 0%, #005522 20%, #005522 80%, #002b11 100%); border: 2px solid #daa520; border-radius: 4px 2px 2px 4px; box-shadow: 5px 0 15px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 15px 0; z-index: 10;">
+                <div style="width: 80%; height: 5px; border-top: 1px solid #daa520; border-bottom: 1px solid #daa520;"></div>
+                <div style="color: #daa520; writing-mode: vertical-rl; text-orientation: mixed; font-weight: bold; font-family: 'Times New Roman', serif; letter-spacing: 2px; font-size: 0.9rem; text-shadow: 1px 1px 2px #000; transform: rotate(180deg);">ENCANTOS</div>
+                <div style="width: 80%; height: 5px; border-top: 1px solid #daa520; border-bottom: 1px solid #daa520;"></div>
+            </div>
+
+            <!-- Tomo 3: ESTRELA (Inclinado) -->
+            <div style="width: 40px; height: 150px; background: linear-gradient(to right, #000b22 0%, #001a55 20%, #001a55 80%, #000b22 100%); border: 2px solid #daa520; border-radius: 4px 2px 2px 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; transform: rotate(12deg); transform-origin: bottom left; margin-bottom: -2px;">
+                <div style="color: #daa520; font-size: 1.3rem; text-shadow: 0 0 5px #daa520;">★</div>
+            </div>
+
+            <!-- Tomo 4: HISTÓRIAS -->
+            <div style="width: 55px; height: 210px; background: linear-gradient(to right, #2a1610 0%, #4a2f24 20%, #4a2f24 80%, #2a1610 100%); border: 2px solid #b87333; border-radius: 4px 2px 2px 4px; box-shadow: -5px 0 15px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 20px 0; margin-left: 10px; z-index: 10;">
+                <div style="width: 80%; height: 12px; background: repeating-linear-gradient(to bottom, #b87333, #b87333 2px, transparent 2px, transparent 4px);"></div>
+                <div style="color: #b87333; writing-mode: vertical-rl; text-orientation: mixed; font-weight: bold; font-family: 'Times New Roman', serif; letter-spacing: 3px; font-size: 1rem; text-shadow: 1px 1px 2px #000; transform: rotate(180deg);">HISTÓRIAS</div>
+                <div style="width: 80%; height: 12px; background: repeating-linear-gradient(to bottom, #b87333, #b87333 2px, transparent 2px, transparent 4px);"></div>
+            </div>
+
+            <!-- NOVO Tomo 8: SONHOS -->
+            <div style="width: 48px; height: 165px; background: linear-gradient(to right, #001f3f 0%, #1e3f66 20%, #1e3f66 80%, #001f3f 100%); border: 2px solid #e0e0e0; border-radius: 4px 2px 2px 4px; box-shadow: 5px 0 15px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 12px 0; z-index: 10;">
+                <div style="width: 60%; height: 2px; background-color: #e0e0e0;"></div>
+                <div style="width: 40%; height: 2px; background-color: #e0e0e0; margin-top: 3px;"></div>
+                <div style="color: #e0e0e0; writing-mode: vertical-rl; text-orientation: mixed; font-weight: bold; font-family: 'Times New Roman', serif; letter-spacing: 2px; font-size: 0.9rem; text-shadow: 1px 1px 2px #000; transform: rotate(180deg);">SONHOS</div>
+                <div style="width: 40%; height: 2px; background-color: #e0e0e0; margin-bottom: 3px;"></div>
+                <div style="width: 60%; height: 2px; background-color: #e0e0e0;"></div>
+            </div>
+
+            <!-- Tomo 5: SEGREDOS -->
+            <div style="width: 45px; height: 175px; background: linear-gradient(to right, #240036 0%, #4d0074 20%, #4d0074 80%, #240036 100%); border: 2px solid #eab308; border-radius: 4px 2px 2px 4px; box-shadow: 5px 0 15px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 12px 0; z-index: 10;">
+                <div style="width: 60%; height: 3px; background-color: #eab308; border-radius: 50%;"></div>
+                <div style="color: #eab308; writing-mode: vertical-rl; text-orientation: mixed; font-weight: bold; font-family: 'Times New Roman', serif; letter-spacing: 2px; font-size: 0.85rem; text-shadow: 1px 1px 2px #000; transform: rotate(180deg);">SEGREDOS</div>
+                <div style="width: 60%; height: 3px; background-color: #eab308; border-radius: 50%;"></div>
+            </div>
+
+            <!-- Tomo 6: MISTÉRIOS -->
+            <div style="width: 50px; height: 200px; background: linear-gradient(to right, #001a22 0%, #003b4d 20%, #003b4d 80%, #001a22 100%); border: 2px solid #c0c0c0; border-radius: 4px 2px 2px 4px; box-shadow: -5px 0 15px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 18px 0; z-index: 10;">
+                <div style="width: 100%; height: 4px; background: repeating-linear-gradient(to right, #c0c0c0, #c0c0c0 4px, transparent 4px, transparent 8px);"></div>
+                <div style="color: #c0c0c0; writing-mode: vertical-rl; text-orientation: mixed; font-weight: bold; font-family: 'Times New Roman', serif; letter-spacing: 2px; font-size: 0.9rem; text-shadow: 1px 1px 2px #000; transform: rotate(180deg);">MISTÉRIOS</div>
+                <div style="width: 100%; height: 4px; background: repeating-linear-gradient(to right, #c0c0c0, #c0c0c0 4px, transparent 4px, transparent 8px);"></div>
+            </div>
+
+            <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 15px; background: linear-gradient(to right, #2a1610, #4a2f24, #2a1610); border-top: 2px solid #140a05; z-index: 20;"></div>
+        </div> <!-- Fechamento da Estante Estática -->
+
+        <!-- ========================================== -->
+        <!-- 📜 ABA: CENTRAL DE RELATÓRIOS DO ACERVO      -->
+        <!-- ========================================== -->
+        <div id="aba-relatorios" style="display: none; width: 100%; margin-top: 20px; padding: 30px; background-color: #fdf5e6; border: 3px solid #8c6d46; border-radius: 12px; box-shadow: 0 5px 20px rgba(140, 109, 70, 0.4); box-sizing: border-box;">
+            <h2 id="titulo-relatorios" style="color: #8B0000; border-bottom: 2px solid #8c6d46; padding-bottom: 10px; margin-top: 0; margin-bottom: 25px; text-transform: uppercase; font-size: 1.8rem; letter-spacing: 2px; text-align: center;">
+                📜 Registros do Acervo
+            </h2>
+            <div id="menu-relatorios-principal" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center;">
+                <button id="btn-relatorio-usuarios" style="flex: 1; min-width: 150px; height: 40px; font-weight: bold; border: 2px solid #8B0000; border-radius: 6px; cursor: pointer; color: #8B0000; background-color: transparent; font-size: 0.95rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8B0000'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#8B0000'">👥 MEMBROS (ATIVOS)</button>
+                <button id="btn-relatorio-livros" style="flex: 1; min-width: 150px; height: 40px; font-weight: bold; border: 2px solid #8B0000; border-radius: 6px; cursor: pointer; color: #8B0000; background-color: transparent; font-size: 0.95rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8B0000'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#8B0000'">📚 ACERVO (ATUAL)</button>
+                <button id="btn-relatorio-emprestimos" style="flex: 1; min-width: 150px; height: 40px; font-weight: bold; border: 2px solid #8B0000; border-radius: 6px; cursor: pointer; color: #8B0000; background-color: transparent; font-size: 0.95rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8B0000'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#8B0000'">⏳ EMPRÉSTIMOS</button>
+                <button id="btn-relatorio-historico" style="flex: 1; min-width: 150px; height: 40px; font-weight: bold; border: 2px solid #8B0000; border-radius: 6px; cursor: pointer; color: #8B0000; background-color: transparent; font-size: 0.95rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8B0000'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#8B0000'">📖 HISTÓRICO (BACKUP)</button>
+            </div>
+            <div id="menu-relatorios-historico" style="display: none; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center;">
+                <button id="btn-hist-membros" style="flex: 1; min-width: 120px; height: 40px; font-weight: bold; border: 2px solid #8c6d46; border-radius: 6px; cursor: pointer; color: #8c6d46; background-color: transparent; font-size: 0.85rem; text-transform: uppercase; transition: 0.3s;">👥 Histórico Membros</button>
+                <button id="btn-hist-acervo" style="flex: 1; min-width: 120px; height: 40px; font-weight: bold; border: 2px solid #8c6d46; border-radius: 6px; cursor: pointer; color: #8c6d46; background-color: transparent; font-size: 0.85rem; text-transform: uppercase; transition: 0.3s;">📚 Histórico Acervo</button>
+                <button id="btn-hist-emprestimos" style="flex: 1; min-width: 120px; height: 40px; font-weight: bold; border: 2px solid #8c6d46; border-radius: 6px; cursor: pointer; color: #8c6d46; background-color: transparent; font-size: 0.85rem; text-transform: uppercase; transition: 0.3s;">⏳ Histórico Empréstimos</button>
+            </div>
+            <div id="ferramentas-relatorio" style="display: none; justify-content: flex-end; margin-bottom: 15px;">
+                <button id="btn-exportar-planilha" style="padding: 8px 20px; font-weight: bold; border: 2px solid #2E7D32; border-radius: 6px; cursor: pointer; color: #2E7D32; background-color: transparent; font-size: 0.9rem; text-transform: uppercase; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onmouseover="this.style.backgroundColor='#2E7D32'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#2E7D32'">💾 Exportar (Excel)</button>
+            </div>
+            <div id="container-tabela-relatorios" style="background: rgba(255, 255, 255, 0.7); border: 2px solid #8c6d46; border-radius: 8px; padding: 20px; min-height: 400px; overflow-x: auto; box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);">
+                <p id="mensagem-vazia-relatorios" style="color: #8c6d46; font-style: italic; text-align: center; margin-top: 150px; font-size: 1.2rem;">🪄 Selecione uma das Abas acima!</p>
+            </div>
+            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 25px;">
+                <button id="btn-voltar-relatorios" style="display: none; padding: 10px 35px; font-weight: bold; border: 2px solid #8c6d46; border-radius: 6px; cursor: pointer; color: #8c6d46; background-color: transparent; font-size: 1rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8c6d46'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#8c6d46'">↩️ Voltar</button>
+                <button id="btn-fechar-relatorios" style="padding: 10px 35px; font-weight: bold; border: 2px solid #5c4033; border-radius: 6px; cursor: pointer; color: #5c4033; background-color: transparent; font-size: 1rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#5c4033'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#5c4033'">✖ Fechar</button>
+            </div>
+        </div> <!-- FECHA #aba-relatorios -->
+
+    </div> <!-- FECHAMENTO DO PAINEL PRINCIPAL (Abaçada com relatórios) -->
+
+    <!-- MODAL: CADASTRAR NOVA OBRA -->
+    <div id="modal-livro" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 100000;">
+        <div class="modal-conteudo" style="max-width: 500px;">
+            <h2>Cadastrar Nova Obra</h2>
+            <input type="text" id="codigo-livro" class="input-tinta" placeholder="Código Único" style="text-transform: uppercase;">
+            <input type="text" id="titulo-livro" class="input-tinta" placeholder="Título da Obra" style="text-transform: capitalize;">
+            <input type="text" id="autor-livro" class="input-tinta" placeholder="Autor da Obra" style="text-transform: capitalize;">
+            <input type="text" id="categoria-livro" class="input-tinta" placeholder="Gênero da Obra" style="text-transform: capitalize;">
+            <input type="hidden" id="ciclo-livro" value="F1">
+            <p style="text-align: center; font-weight: bold; color: #5c4033; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">Ciclo Adequado:</p>
+            <div style="display: flex; gap: 5px; margin-bottom: 5px; background: rgba(140, 109, 70, 0.15); padding: 5px; border-radius: 8px; border: 1px solid rgba(140, 109, 70, 0.3);">
+                <div onclick="mudarCicloLivroVisual('F1', this)" class="btn-ciclo-livro" style="flex: 1; text-align: center; padding: 10px; background: #8c6d46; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.3s;">F1</div>
+                <div onclick="mudarCicloLivroVisual('F2', this)" class="btn-ciclo-livro" style="flex: 1; text-align: center; padding: 10px; background: transparent; color: #5c4033; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.3s;">F2</div>
+                <div onclick="mudarCicloLivroVisual('ME', this)" class="btn-ciclo-livro" style="flex: 1; text-align: center; padding: 10px; background: transparent; color: #5c4033; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.3s;">ME</div>
+            </div>
+            <script>
+                function mudarCicloLivroVisual(valor, elementoClicado) {
+                    document.getElementById('ciclo-livro').value = valor;
+                    const botoes = document.querySelectorAll('.btn-ciclo-livro');
+                    botoes.forEach(b => { b.style.background = 'transparent'; b.style.color = '#5c4033'; });
+                    elementoClicado.style.background = '#8c6d46';
+                    elementoClicado.style.color = 'white';
+                }
+            </script>
+            <textarea id="resumo-livro" placeholder="Escreva um breve resumo ou sinopse da obra..." rows="4" style="width: 100%; background-color: var(--cor-pergaminho); border: 2px solid #8c6d46; border-radius: 6px; padding: 10px; color: #333; font-size: 1rem; resize: none; font-family: inherit; margin-top: 5px; text-transform: none;"></textarea>
+            <div style="display: flex; gap: 10px; margin-top: 15px; width: 100%;">
+                <button class="btn-3d btn-esmeralda" id="salvar-livro" style="flex: 1;">Salvar Obra</button>
+                <button class="btn-3d btn-rubi" id="fechar-modal" style="flex: 1;">Recuar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CADASTRAR NOVO MEMBRO -->
+    <div id="modal-usuario" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 100000;">
+        <div class="modal-conteudo">
+            <h2>Pergaminho de Admissão</h2>
+            <input type="text" id="nome-usuario" class="input-tinta" placeholder="Nome do Usuário" style="text-transform: capitalize;">
+            <input type="email" id="email-usuario" class="input-tinta" placeholder="E-mail (@objetivore.edu)">
+            <input type="password" id="senha-usuario" class="input-tinta" placeholder="Palavra-passe (mínimo 6 dígitos)">
+            <input type="hidden" id="ciclo-usuario" value="F1">
+            <p style="text-align: center; font-weight: bold; color: #5c4033; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">Ciclo do Aluno:</p>
+            <div style="display: flex; gap: 5px; margin-bottom: 10px; background: rgba(140, 109, 70, 0.15); padding: 5px; border-radius: 8px; border: 1px solid rgba(140, 109, 70, 0.3);">
+                <div onclick="mudarCicloVisual('F1', this)" class="btn-ciclo-visual" style="flex: 1; text-align: center; padding: 10px; background: #8c6d46; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.3s;">F1</div>
+                <div onclick="mudarCicloVisual('F2', this)" class="btn-ciclo-visual" style="flex: 1; text-align: center; padding: 10px; background: transparent; color: #5c4033; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.3s;">F2</div>
+                <div onclick="mudarCicloVisual('ME', this)" class="btn-ciclo-visual" style="flex: 1; text-align: center; padding: 10px; background: transparent; color: #5c4033; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.3s;">ME</div>
+            </div>
+            <script>
+                function mudarCicloVisual(valor, elementoClicado) {
+                    document.getElementById('ciclo-usuario').value = valor;
+                    const botoesCiclo = document.querySelectorAll('.btn-ciclo-visual');
+                    botoesCiclo.forEach(b => { b.style.background = 'transparent'; b.style.color = '#5c4033'; });
+                    elementoClicado.style.background = '#8c6d46';
+                    elementoClicado.style.color = 'white';
+                }
+            </script>
+            <input type="hidden" id="nivel-usuario" value="aluno">
+            <p style="text-align: center; font-weight: bold; color: #5c4033; margin-top: 10px; margin-bottom: 5px; font-size: 0.9rem;">Nível de Acesso:</p>
+            <div style="display: flex; gap: 5px; margin-bottom: 15px; background: rgba(140, 109, 70, 0.15); padding: 5px; border-radius: 8px; border: 1px solid rgba(140, 109, 70, 0.3);">
+                <div onclick="mudarNivelVisual('aluno', this)" class="btn-nivel-visual" style="flex: 1; text-align: center; padding: 10px; background: #8c6d46; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">Aluno</div>
+                <div onclick="mudarNivelVisual('gestao', this)" class="btn-nivel-visual" style="flex: 1; text-align: center; padding: 10px; background: transparent; color: #5c4033; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">Gestão</div>
+                <div onclick="mudarNivelVisual('adm', this)" class="btn-nivel-visual" style="flex: 1; text-align: center; padding: 10px; background: transparent; color: #5c4033; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">Admin</div>
+            </div>
+            <script>
+                function mudarNivelVisual(valor, elementoClicado) {
+                    document.getElementById('nivel-usuario').value = valor;
+                    const botoes = document.querySelectorAll('.btn-nivel-visual');
+                    botoes.forEach(b => { b.style.background = 'transparent'; b.style.color = '#5c4033'; });
+                    elementoClicado.style.background = '#8c6d46';
+                    elementoClicado.style.color = 'white';
+                }
+            </script>
+            <div style="display: flex; gap: 10px; margin-top: 15px; width: 100%;">
+                <button class="btn-3d btn-esmeralda" id="salvar-usuario" style="flex: 1;">Registrar</button>
+                <button class="btn-3d btn-rubi" id="fechar-modal-usuario" style="flex: 1;">Recuar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CATÁLOGO COMPLETO -->
+    <style>
+        @keyframes brilhoDourado {
+            0% { border-color: rgba(255, 215, 0, 0.3); box-shadow: 0 0 2px rgba(255, 215, 0, 0.2); }
+            50% { border-color: rgba(255, 215, 0, 1); box-shadow: 0 0 10px rgba(255, 215, 0, 0.7); }
+            100% { border-color: rgba(255, 215, 0, 0.3); box-shadow: 0 0 2px rgba(255, 215, 0, 0.2); }
+        }
+        .icone-copiar-magico { border: 2px solid #FFD700; border-radius: 8px; animation: brilhoDourado 2s infinite; }
+    </style>
+    <div id="modal-catalogo" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 100000; padding: 20px; box-sizing: border-box;">
+        <div style="max-width: 800px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; background-color: #f4ecd8; border: 3px solid #8c6d46; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); padding: 0;">
+            <div style="background-color: #8c6d46; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box;">
+                <h2 style="color: white; margin: 0; font-family: 'Georgia', serif; font-size: 1.4rem;">📜 Catálogo Mágico do Acervo</h2>
+                <button id="fechar-modal-catalogo" style="background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; font-weight: bold; line-height: 1;" onmouseover="this.style.color='#ffcccc'" onmouseout="this.style.color='white'">&times;</button>
+            </div>
+            <div style="padding: 15px 20px; background-color: rgba(140, 109, 70, 0.1); border-bottom: 2px solid #8c6d46; display: flex; gap: 10px; flex-wrap: wrap; width: 100%; box-sizing: border-box;">
+                <input type="text" id="filtro-catalogo" placeholder="🔎 Buscar por título, autor ou gênero..." style="flex: 2; padding: 10px 12px; border: 2px solid #8c6d46; border-radius: 6px; font-size: 0.95rem; min-width: 220px; outline: none; background: white; color: #333;">
+                <select id="filtro-status-catalogo" style="flex: 1; padding: 10px 12px; border: 2px solid #8c6d46; border-radius: 6px; font-size: 0.95rem; color: #5c4033; font-weight: bold; cursor: pointer; min-width: 180px; outline: none; background-color: white;">
+                    <option value="todos">📚 Todas as Obras</option>
+                    <option value="livres">🟢 Apenas Livres</option>
+                    <option value="emprestados">🔴 Emprestados</option>
+                </select>
+            </div>
+            <div id="lista-catalogo-container" style="flex: 1; overflow-y: auto; padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; align-content: start; background-color: #faf6ee; width: 100%; box-sizing: border-box;"></div>
+        </div>
+    </div>
+
+    <!-- MODAL: TOMO ENCONTRADO -->
+    <div id="modal-tomo-encontrado" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.95); justify-content: center; align-items: center; z-index: 100000; overflow-y: auto; padding: 15px;">
+        <div style="display: flex; flex-direction: column; align-items: center; max-width: 850px; width: 100%; margin: auto;">
+            <div id="capa-livro" style="width: 300px; height: 420px; background: linear-gradient(45deg, #2c1610, #5c3a21); border: 4px solid #8c6d46; border-radius: 5px 15px 15px 5px; box-shadow: 15px 15px 25px rgba(0,0,0,0.8), inset 5px 0 15px rgba(0,0,0,0.6); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                <div style="border: 2px dashed rgba(220, 185, 130, 0.5); width: 85%; height: 90%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; text-align: center; border-radius: 8px;">
+                    <h2 id="capa-titulo" style="color: var(--texto-dourado); font-size: 1.7rem; text-shadow: 2px 2px 5px #000; margin-bottom: 30px; text-transform: capitalize;">Título do Livro</h2>
+                    <div style="width: 65px; height: 65px; background-color: #8B0000; border-radius: 50%; box-shadow: 0 5px 10px rgba(0,0,0,0.9), inset 0 0 15px rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; border: 3px solid #5a0000; margin-bottom: 20px;">
+                        <span style="color: var(--texto-dourado); font-size: 1.6rem;">🔮</span>
+                    </div>
+                    <p style="color: rgba(255, 255, 255, 0.6); font-style: italic; font-size: 0.9rem;">(Clique no selo para abrir a obra)</p>
+                </div>
+            </div>
+            <div id="livro-aberto" style="display: none; width: 100%; background-color: #f4e8d2; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.9); position: relative; overflow: hidden; border: 2px solid #8c6d46;">
+                <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 60px; margin-left: -30px; background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(100,50,0,0.05) 40%, rgba(100,50,0,0.2) 50%, rgba(100,50,0,0.05) 60%, rgba(0,0,0,0) 100%); z-index: 1;"></div>
+                <div style="display: flex; flex-wrap: wrap; width: 100%;">
+                    <div style="flex: 1; min-width: 280px; padding: 30px; border-right: 1px solid rgba(140, 109, 70, 0.2);">
+                        <h2 id="resultado-titulo" style="color: #8B0000; margin-bottom: 15px; font-size: 1.6rem; border-bottom: 2px solid #8c6d46; padding-bottom: 8px;">Título do Livro</h2>
+                        <p style="color: #5c4033; font-weight: bold; font-size: 1rem; margin-bottom: 3px;">Autor(a):</p>
+                        <p id="resultado-autor" style="color: #333333; font-style: italic; font-size: 1.1rem; margin-bottom: 15px;">Autor Mágico</p>
+                        <p style="color: #5c4033; font-weight: bold; font-size: 1rem; margin-bottom: 3px;">Gênero:</p>
+                        <p id="resultado-categoria" style="color: #333333; font-size: 1.1rem; margin-bottom: 25px;">Categoria</p>
+                        <div style="background-color: rgba(140, 109, 70, 0.15); padding: 12px; border-radius: 8px; border: 1px dashed #8c6d46; text-align: center;">
+                            <p id="resultado-codigo" style="color: #333333; font-size: 1rem; margin: 0;">Código da Obra:<br><strong style="color: #8B0000; font-size: 1.4rem; display: block; margin-top: 3px;">0000</strong></p>
+                        </div>
+                    </div>
+                    <div style="flex: 1; min-width: 280px; padding: 30px; position: relative;">
+                        <h3 style="color: #5c4033; border-bottom: 1px dashed #8c6d46; padding-bottom: 8px; margin-bottom: 15px; font-size: 1.3rem;">Sinopse da Obra</h3>
+                        <p id="resultado-resumo" style="color: #222; font-size: 1.05rem; line-height: 1.5; text-align: justify; text-transform: none !important;"></p>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-topazio" id="fechar-modal-tomo" style="width: 280px; height: 50px; margin-top: 15px; font-size: 1.1rem; display: flex; justify-content: center; align-items: center; gap: 8px; box-sizing: border-box;">🛡️ Guardar Obra</button>
+        </div>
+    </div>
+
+    <!-- MODAL: ESPAÇO DA GESTÃO -->
+    <div id="modal-gestao" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 100000; padding: 20px; box-sizing: border-box; overflow-y: auto;">
+        <div class="modal-conteudo" style="max-width: 1100px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; background: #fdf5e6; border: 3px solid #8c6d46; border-radius: 12px; padding: 20px 25px 25px 25px; box-shadow: 0 0 30px rgba(140, 109, 70, 0.4); box-sizing: border-box;">
+            <h2 style="color: #8B0000; border-bottom: 2px solid #8c6d46; padding-bottom: 8px; margin-top: 0; margin-bottom: 15px; text-align: center; text-transform: uppercase; font-size: 1.6rem; letter-spacing: 2px;">🗝️ Espaço da Gestão</h2>
+            <div class="nav-abas-gestao" style="display: flex; flex-direction: row; gap: 8px; border-bottom: 2px solid #8c6d46; margin-bottom: 15px; width: 100%; box-sizing: border-box;">
+                <button class="btn-aba-gestao ativa" data-aba="acervo" onclick="trocarAbaSimple('acervo')" style="flex: 1; padding: 10px 5px; font-weight: bold; cursor: pointer; border: 1px solid #8c6d46; border-bottom: none; border-radius: 6px 6px 0 0; background: #8B0000; color: #fff; text-align: center; font-size: 0.9rem;">📚 Acervo Geral</button>
+                <button class="btn-aba-gestao" data-aba="emprestimos" onclick="trocarAbaSimple('emprestimos')" style="flex: 1; padding: 10px 5px; font-weight: bold; cursor: pointer; border: 1px solid #8c6d46; border-bottom: none; border-radius: 6px 6px 0 0; background: #d2b48c; color: #333; text-align: center; font-size: 0.9rem;">🤝 Empréstimos</button>
+                <button class="btn-aba-gestao" data-aba="etiquetas" onclick="trocarAbaSimple('etiquetas')" style="flex: 1; padding: 10px 5px; font-weight: bold; cursor: pointer; border: 1px solid #8c6d46; border-bottom: none; border-radius: 6px 6px 0 0; background: #d2b48c; color: #333; text-align: center; font-size: 0.9rem;">🏷️ Etiquetas</button>
+                <button class="btn-aba-gestao" data-aba="concurso" onclick="trocarAbaSimple('concurso')" style="flex: 1; padding: 10px 5px; font-weight: bold; cursor: pointer; border: 1px solid #8c6d46; border-bottom: none; border-radius: 6px 6px 0 0; background: #d2b48c; color: #333; text-align: center; font-size: 0.9rem;">✍️ Concurso</button>
+                <button class="btn-aba-gestao" data-aba="moderacao" onclick="trocarAbaSimple('moderacao')" style="flex: 1; padding: 10px 5px; font-weight: bold; cursor: pointer; border: 1px solid #8c6d46; border-bottom: none; border-radius: 6px 6px 0 0; background: #d2b48c; color: #333; text-align: center; font-size: 0.9rem;">🛡️ Moderação</button>
+            </div>
+            <div class="conteudos-gestao" style="flex: 1; width: 100%; box-sizing: border-box; overflow-y: auto; max-height: 65vh; padding: 15px; background: rgba(255,255,255,0.7); border-radius: 8px; border: 1px solid #d2b48c;">
+                <div id="aba-acervo" class="item-aba-conteudo" style="display: block; width: 100%;">
+                    <div id="lista-gestao-container" style="width: 100%;"></div>
+                </div>
+                <div id="aba-emprestimos" class="item-aba-conteudo" style="display: none; width: 100%;">
+                    <h3 style="color: #8B0000; border-bottom: 2px solid #8c6d46; padding-bottom: 8px; margin-top: 0; margin-bottom: 15px; text-align: center; text-transform: uppercase; font-size: 1.4rem; letter-spacing: 2px;">📝 Central de Empréstimos</h3>
+                    <div style="background: rgba(140, 109, 70, 0.1); border: 2px dashed #8c6d46; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: nowrap; width: 100%; box-sizing: border-box;">
+                        <h4 style="color: #5c4033; margin: 0; white-space: nowrap; font-size: 0.95rem; flex-shrink: 0;">⚡ Empréstimo Balcão:</h4>
+                        <input type="text" id="input-codigo-balcao" placeholder="Código" style="width: 120px; flex-shrink: 0; padding: 8px; border: 2px solid #8c6d46; border-radius: 6px; text-align: center; font-weight: bold; font-size: 0.9rem; background: #fff; outline: none;">
+                        <input type="email" id="input-email-balcao" list="lista-emails-alunos" placeholder="E-mail do Aluno" style="flex: 1; min-width: 0; padding: 8px 12px; border: 2px solid #8c6d46; border-radius: 6px; font-size: 0.9rem; background: #fff; outline: none;">
+                        <datalist id="lista-emails-alunos"></datalist>
+                        <button id="btn-emprestar-balcao" style="flex-shrink: 0; padding: 8px 20px; font-weight: bold; border: 2px solid #8c6d46; border-radius: 6px; cursor: pointer; color: #8c6d46; background-color: transparent; font-size: 0.9rem; text-transform: uppercase; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8c6d46'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#8c6d46'">🪄 Emprestar</button>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div style="display: flex; flex-direction: column;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <h3 style="color: #5c4033; margin: 0; padding-left: 10px; font-size: 1.1rem; border-left: 5px solid #8B0000;">⏳ Pedidos Online (Aguardando Aprovação)</h3>
+                                <span id="contador-pendentes" style="color: #8c6d46; font-weight: bold; font-size: 0.95rem; border: 1px solid #8c6d46; padding: 2px 10px; border-radius: 12px; background: transparent;">0 de 0</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.7); border: 2px solid #8c6d46; padding: 10px; border-radius: 8px; height: 170px;">
+                                <button id="btn-prev-pendentes" style="background: none; border: none; font-size: 2.5rem; cursor: pointer; color: #8B0000; padding: 0 10px; transition: 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">&#10094;</button>
+                                <div id="lista-pedidos-pendentes" style="flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"></div>
+                                <button id="btn-next-pendentes" style="background: none; border: none; font-size: 2.5rem; cursor: pointer; color: #8B0000; padding: 0 10px; transition: 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">&#10095;</button>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <h3 style="color: #5c4033; margin: 0; padding-left: 10px; font-size: 1.1rem; border-left: 5px solid #4CAF50;">📚 Livros Fora do Acervo (Devoluções)</h3>
+                                <span id="contador-ativos" style="color: #2E7D32; font-weight: bold; font-size: 0.95rem; border: 1px solid #2E7D32; padding: 2px 10px; border-radius: 12px; background: transparent;">0 de 0</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.7); border: 2px solid #4CAF50; padding: 10px; border-radius: 8px; height: 170px;">
+                                <button id="btn-prev-ativos" style="background: none; border: none; font-size: 2.5rem; cursor: pointer; color: #4CAF50; padding: 0 10px; transition: 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">&#10094;</button>
+                                <div id="lista-emprestimos-ativos" style="flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"></div>
+                                <button id="btn-next-ativos" style="background: none; border: none; font-size: 2.5rem; cursor: pointer; color: #4CAF50; padding: 0 10px; transition: 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">&#10095;</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="aba-etiquetas" class="item-aba-conteudo" style="display: none; width: 100%;">
+                    <h3 style="color: #8B0000; border-bottom: 2px solid #8c6d46; padding-bottom: 8px; margin-top: 0; margin-bottom: 15px; text-align: center; text-transform: uppercase; font-size: 1.4rem; letter-spacing: 2px;">🏷️ Fábrica de Etiquetas</h3>
+                    
+<!-- Barra de Controles -->
+                    <div style="background: rgba(140, 109, 70, 0.1); border: 2px dashed #8c6d46; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: space-between;">
+                        
+                        <button id="btn-carregar-todas-etiquetas" style="flex: 1; min-width: 200px; height: 45px; background-color: #B8860B; color: white; border: 2px solid #8c6d46; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.95rem; text-transform: uppercase; box-sizing: border-box; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8c6d46'" onmouseout="this.style.backgroundColor='#B8860B'">📚 Carregar Acervo</button>
+                        
+                        <input type="text" id="input-busca-etiqueta" placeholder="Buscar título ou código..." style="flex: 1; min-width: 200px; height: 45px; padding: 0 15px; border: 2px solid #8c6d46; border-radius: 6px; outline: none; font-size: 0.95rem; box-sizing: border-box; text-align: center;">
+                        
+                        <button id="btn-imprimir-etiquetas" style="flex: 1; min-width: 200px; height: 45px; background-color: #B8860B; color: white; border: 2px solid #8c6d46; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.95rem; text-transform: uppercase; box-sizing: border-box; transition: 0.3s;" onmouseover="this.style.backgroundColor='#8c6d46'" onmouseout="this.style.backgroundColor='#B8860B'">🖨️ Imprimir Selecionadas</button>
+                        
+                    </div>
+
+
+
+                    <!-- Área de Pré-visualização -->
+                    <div style="background: rgba(255, 255, 255, 0.8); border: 2px solid #8c6d46; border-radius: 8px; padding: 20px; min-height: 300px; max-height: 45vh; overflow-y: auto; box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px;">
+                            <label style="font-weight: bold; color: #5c4033; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="chk-selecionar-todas-etiquetas" style="transform: scale(1.3); cursor: pointer;">
+                                Marcar/Desmarcar Todas
+                            </label>
+                            <span id="contador-etiquetas-selecionadas" style="color: #8B0000; font-weight: bold; background: rgba(139, 0, 0, 0.1); padding: 4px 12px; border-radius: 12px; border: 1px solid #8B0000;">0 prontas para impressão</span>
+                        </div>
+                        
+                        <!-- Onde as etiquetas serão injetadas pelo JS -->
+                        <div id="grade-etiquetas-preview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px;">
+                            <p style="grid-column: 1 / -1; text-align: center; color: #8c6d46; font-style: italic; margin-top: 40px; font-size: 1.1rem;">🪄 Clique em "Carregar Acervo" ou faça uma busca para gerar as etiquetas.</p>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div id="aba-concurso" class="item-aba-conteudo" style="display: none; width: 100%;"></div>
+                <div id="aba-moderacao" class="item-aba-conteudo" style="display: none; width: 100%;"></div>
+            </div>
+            <button class="btn-3d btn-rubi" id="fechar-modal-gestao" onclick="fecharModalGestao()" style="width: 100%; height: 45px; margin-top: 15px; cursor: pointer;">Retornar ao Salão Principal</button>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE ABAS -->
+    <script>
+    function trocarAbaSimple(nomeAba) {
+        var containers = document.querySelectorAll('.item-aba-conteudo');
+        containers.forEach(function(el) { el.style.display = 'none'; });
+        var botoes = document.querySelectorAll('.btn-aba-gestao');
+        botoes.forEach(function(btn) { btn.style.background = '#d2b48c'; btn.style.color = '#333'; });
+        var abaAlvo = document.getElementById('aba-' + nomeAba);
+        if (abaAlvo) { abaAlvo.style.display = 'block'; }
+        var btnAtivo = document.querySelector('.btn-aba-gestao[data-aba="' + nomeAba + '"]');
+        if (btnAtivo) { btnAtivo.style.background = '#8B0000'; btnAtivo.style.color = '#fff'; }
+    }
+    </script>
+
+    <!-- MODAL: CONFIGURAÇÃO GERAL -->
+    <div id="modal-configuracoes" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 100000; padding: 20px; overflow-y: auto;">
+        <div class="modal-conteudo" style="position: relative; max-width: 700px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; background-color: #fdf5e6; padding: 20px; border-radius: 8px; border: 2px solid #8c6d46;">
+            <button id="fechar-configuracoes" style="position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 1.5rem; font-weight: bold; color: #8B0000; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="Fechar">✖</button>
+            <h2 style="color: #8B0000; border-bottom: 2px solid #8c6d46; padding-bottom: 10px; margin-bottom: 15px; text-align: center;">⚙️ Configuração Geral</h2>
+            <div style="display: flex; gap: 5px; margin-bottom: 20px; justify-content: center; width: 100%;">
+                <button id="btn-tab-config-torneio" style="flex: 1; height: 45px; padding: 0 2px; cursor: pointer; font-weight: bold; background-color: #8c6d46; color: white; border: 2px solid #8c6d46; border-radius: 5px; font-size: 0.8rem;">🏆 Torneio</button>
+                <button id="btn-tab-config-login" style="flex: 1; height: 45px; padding: 0 2px; cursor: pointer; font-weight: bold; background-color: transparent; color: #8c6d46; border: 2px solid #8c6d46; border-radius: 5px; font-size: 0.8rem;">🔐 Acessos</button>
+                <button id="btn-tab-config-sistema" style="flex: 1; height: 45px; padding: 0 2px; cursor: pointer; font-weight: bold; background-color: transparent; color: #8c6d46; border: 2px solid #8c6d46; border-radius: 5px; font-size: 0.8rem;">⚙️ Sistema</button>
+            </div>
+            <div id="aba-config-torneio" style="display: block; flex: 1;">
+                <h3 style="color: #5c4033; margin-bottom: 15px; text-align: center;">Agendamento do Torneio</h3>
+                <div style="display: flex; flex-direction: column; gap: 15px; max-width: 650px; margin: 0 auto; background: rgba(0,0,0,0.03); padding: 20px; border-radius: 8px; border: 1px dashed #8c6d46;">
+                    <label style="color: #8B0000; font-weight: bold;">Data e Hora de Início:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="date" id="torneio-data-inicio" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
+                        <input type="time" id="torneio-hora-inicio" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
+                    </div>
+                    <label style="color: #8B0000; font-weight: bold; margin-top: 10px;">Data e Hora de Fim:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="date" id="torneio-data-fim" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
+                        <input type="time" id="torneio-hora-fim" style="flex: 1; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px;">
+                    </div>
+                    <button class="btn-esmeralda" id="btn-salvar-torneio" style="height: 50px; margin-top: 15px; width: 100%; border: 2px solid #FFD700; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; text-transform: uppercase; box-shadow: none;">💾 Salvar Torneio</button>
+                </div>
+            </div>
+            <div id="aba-config-login" style="display: none; flex: 1; text-align: center;">
+                <h3 style="color: #5c4033; margin-bottom: 10px;">🔐 Controle de Contas</h3>
+                <p style="color: #333; font-style: italic; margin-bottom: 20px;">Busque o aprendiz e selecione-o para aplicar a ação.</p>
+                <div style="position: relative; width: 80%; max-width: 450px; margin: 0 auto 15px auto;">
+                    <input type="text" id="input-busca-usuario" placeholder="🔍 Digite o e-mail ou nome para buscar..." style="width: 100%; padding: 12px; border: 2px solid #8c6d46; border-radius: 5px; font-size: 1rem; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); box-sizing: border-box; background-color: white;">
+                    <div id="lista-busca-usuarios" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; max-height: 160px; overflow-y: auto; background-color: #fffaf0; border: 2px solid #8c6d46; border-top: none; border-radius: 0 0 5px 5px; z-index: 100; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"></div>
+                </div>
+                <div id="alvo-selecionado-container" style="display: none; margin: 0 auto 20px auto; padding: 10px; background-color: rgba(140, 109, 70, 0.15); border-radius: 5px; border: 1px dashed #8B0000; display: inline-block;">
+                    <span style="color: #5c4033; font-weight: bold; font-size: 0.95rem;">🎯 Alvo Travado: </span>
+                    <span id="texto-alvo-selecionado" style="color: #8B0000; font-weight: bold; font-size: 1.1rem; text-decoration: underline;">Nenhum</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 500px; margin: 0 auto; padding-bottom: 10px;">
+                    <button class="btn-safira" id="btn-acao-resetar" style="height: 50px; font-size: 0.95rem; border: 2px solid #FFD700; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; box-shadow: none;">🔄 Resetar Senha</button>
+                    <button class="btn-esmeralda" id="btn-acao-trocar" style="height: 50px; font-size: 0.95rem; border: 2px solid #FFD700; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; box-shadow: none;">🔑 Trocar Senha</button>
+                    <button class="btn-petroleo" id="btn-acao-bloquear" style="height: 50px; font-size: 0.95rem; border: 2px solid #FFD700; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; box-shadow: none;">🚫 Bloquear Acesso</button>
+                    <button class="btn-rubi" id="btn-acao-excluir" style="height: 50px; font-size: 0.95rem; border: 2px solid #FFD700; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; box-shadow: none;">🗑️ Excluir Conta</button>
+                </div>
+            </div>
+            <div id="aba-config-sistema" style="display: none; flex: 1; text-align: center; padding: 20px; overflow-y: auto;">
+                <h3 style="color: #8B0000; margin-bottom: 10px; border-bottom: 2px dashed #8c6d46; padding-bottom: 10px;">⚙️ Sistema Global (Restrito)</h3>
+                <div id="conteudo-sistema-admin" style="display: none; flex-direction: column; gap: 20px;">
+                    <div style="background: rgba(140, 109, 70, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #8c6d46; text-align: left;">
+                        <h4 style="color: #8B0000; margin: 0 0 5px 0; font-size: 1.1rem;">💾 Cofre de Segurança (Backups)</h4>
+                        <p style="font-size: 0.9rem; color: #333; margin-bottom: 15px; font-style: italic;">Guarde o estado atual do sistema no servidor ou restaure uma versão antiga.</p>
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <button id="btn-fazer-backup" style="flex: 1; padding: 12px; border: 2px solid #8c6d46; border-radius: 6px; cursor: pointer; color: white; background-color: #8c6d46; font-weight: bold; font-size: 0.95rem; text-transform: uppercase; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">💾 Fazer Backup</button>
+                            <button id="btn-abrir-restauracao" style="flex: 1; padding: 12px; border: 2px solid #5c4033; border-radius: 6px; cursor: pointer; color: white; background-color: #5c4033; font-weight: bold; font-size: 0.95rem; text-transform: uppercase; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🔄 Restaurar Backup</button>
+                        </div>
+                        <div id="painel-restauracao" style="display: none; margin-top: 15px; border-top: 1px dashed #8c6d46; padding-top: 15px;">
+                            <h5 style="color: #5c4033; margin: 0 0 10px 0; font-size: 1rem;">Backups Salvos no Servidor:</h5>
+                            <div id="lista-backups-servidor" style="max-height: 150px; overflow-y: auto; background: rgba(255,255,255,0.8); border: 1px solid #8c6d46; border-radius: 6px; padding: 10px;">
+                                <p style="text-align: center; font-style: italic; color: #8c6d46; margin: 0; font-size: 0.9rem; font-family: 'Georgia', serif;">⏳ A ler o cofre do servidor...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="background: rgba(140, 109, 70, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #8c6d46; display: flex; flex-direction: column; text-align: left;">
+                        <style>.piscar-salvar { border-color: #B8860B !important; color: #B8860B !important; }</style>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="color: #8B0000; margin: 0; font-size: 1.1rem;">📜 Registro de Logs</h4>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="btn-limpar-logs" style="min-width: 90px; padding: 6px 10px; border: 2px solid #8B0000; border-radius: 6px; background: transparent; color: #8B0000; font-weight: bold; cursor: pointer;">🗑️ Limpar</button>
+                                <button id="btn-salvar-logs" style="min-width: 90px; padding: 6px 10px; border: 2px solid #006400; border-radius: 6px; background: transparent; color: #006400; font-weight: bold; cursor: pointer;">💾 Salvar</button>
+                                <button id="btn-carregar-logs" style="min-width: 90px; padding: 6px 10px; border: 2px solid #8c6d46; border-radius: 6px; background: transparent; color: #8c6d46; font-weight: bold; cursor: pointer;">🔄 Atualizar</button>
+                            </div>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #333; margin-bottom: 10px; font-style: italic;">Monitorização das últimas ações mágicas.</p>
+                        <div id="container-logs-sistema" style="height: 250px; overflow-y: auto; background: rgba(255,255,255,0.8); border: 2px solid #8c6d46; border-radius: 6px; padding: 15px; font-family: monospace; font-size: 0.85rem; color: #333; text-align: left;">
+                            <p id="texto-log-vazio" style="text-align: center; font-style: italic; color: #8c6d46; margin-top: 80px; font-family: 'Georgia', serif;">Clique em "Atualizar" para invocar os registos...</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="mensagem-sistema-bloqueado" style="display: block; margin-top: 50px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">⛔</div>
+                    <p style="color: #8B0000; font-size: 1.3rem; font-weight: bold; margin-bottom: 5px;">Acesso Restrito</p>
+                    <p style="color: #5c4033; font-style: italic; font-size: 1rem;">Apenas os Administradores Supremos possuem a chave para a Câmara do Sistema.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR TOMO -->
+    <div id="modal-editar" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 100000; padding: 20px;">
+        <div class="modal-conteudo" style="max-width: 500px; width: 100%;">
+            <h2 style="color: #8B0000; border-bottom: 2px solid #8c6d46; padding-bottom: 10px; margin-bottom: 15px; text-align: center;">📜 Reinscrever a Obra</h2>
+            <input type="hidden" id="edit-id-doc">
+            <label style="color: #5c4033; font-weight: bold; font-size: 0.9rem;">Título da Obra:</label>
+            <input type="text" id="edit-titulo" style="width: 100%; margin-bottom: 10px; padding: 8px; border: 2px solid #8c6d46; border-radius: 6px; background: #fff8dc; box-sizing: border-box;">
+            <label style="color: #5c4033; font-weight: bold; font-size: 0.9rem;">Autor:</label>
+            <input type="text" id="edit-autor" style="width: 100%; margin-bottom: 10px; padding: 8px; border: 2px solid #8c6d46; border-radius: 6px; background: #fff8dc; box-sizing: border-box;">
+            <label style="color: #5c4033; font-weight: bold; font-size: 0.9rem;">Categoria:</label>
+            <input type="text" id="edit-categoria" style="width: 100%; margin-bottom: 10px; padding: 8px; border: 2px solid #8c6d46; border-radius: 6px; background: #fff8dc; box-sizing: border-box;">
+            <label style="color: #5c4033; font-weight: bold; font-size: 0.9rem;">Código da Obra:</label>
+            <input type="text" id="edit-codigo" style="width: 100%; margin-bottom: 10px; padding: 8px; border: 2px solid #8c6d46; border-radius: 6px; background: #fff8dc; box-sizing: border-box;">
+            <input type="hidden" id="edit-ciclo" value="F1">
+            <label style="color: #5c4033; font-weight: bold; font-size: 0.9rem;">Ciclo Permitido:</label>
+            <div style="display: flex; gap: 5px; margin-bottom: 10px; background: rgba(140, 109, 70, 0.15); padding: 5px; border-radius: 8px; border: 1px solid rgba(140, 109, 70, 0.3);">
+                <div onclick="mudarEditCicloVisual('F1', this)" class="btn-edit-ciclo" style="flex: 1; text-align: center; padding: 10px; background: #8c6d46; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.3s;">F1</div>
+                <div onclick="mudarEditCicloVisual('F2', this)" class="btn-edit-ciclo" style="flex: 1; text-align: center; padding: 10px; background: transparent; color: #5c4033; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.3s;">F2</div>
+                <div onclick="mudarEditCicloVisual('ME', this)" class="btn-edit-ciclo" style="flex: 1; text-align: center; padding: 10px; background: transparent; color: #5c4033; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: 0.3s;">ME</div>
+            </div>
+            <script>
+                function mudarEditCicloVisual(valor, elementoClicado) {
+                    document.getElementById('edit-ciclo').value = valor;
+                    const botoes = document.querySelectorAll('.btn-edit-ciclo');
+                    botoes.forEach(b => { b.style.background = 'transparent'; b.style.color = '#5c4033'; });
+                    elementoClicado.style.background = '#8c6d46';
+                    elementoClicado.style.color = 'white';
+                }
+            </script>
+            <label style="color: #5c4033; font-weight: bold; font-size: 0.9rem;">Resumo / Sinopse:</label>
+            <textarea id="edit-resumo" rows="3" style="width: 100%; margin-bottom: 15px; padding: 8px; border: 2px solid #8c6d46; border-radius: 6px; background: #fff8dc; resize: none; box-sizing: border-box;"></textarea>
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <button class="btn-topazio" id="salvar-edicao" style="flex: 1; height: 45px; display: flex; justify-content: center; align-items: center;">Salvar</button>
+                <button class="btn-topazio" id="fechar-modal-editar" style="flex: 1; height: 45px; display: flex; justify-content: center; align-items: center;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHAVE MÁGICA -->
+    <div id="chave-torneio" style="display: none; position: fixed; bottom: 30px; right: 30px; font-size: 3.5rem; cursor: pointer; z-index: 100000; filter: drop-shadow(0 0 10px #FFD700);" title="Capture a Chave Mágica!">🗝️</div>
+
+    <!-- MODAL: AVISO DE VITÓRIA DO ALUNO -->
+    <div id="modal-vitoria-aluno" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.92); justify-content: center; align-items: center; z-index: 100000; padding: 15px; box-sizing: border-box; overflow-y: auto;">
+        <div style="background: linear-gradient(135deg, #2b1704 0%, #1a0f02 100%); border: 3px solid #FFD700; border-radius: 12px; padding: 30px 20px; max-width: 500px; width: 100%; text-align: center; position: relative; margin: auto;">
+            <div style="font-size: 4.5rem; margin-bottom: 5px;">🏆</div>
+            <h1 style="color: #FFD700; font-size: 2.2rem; margin-bottom: 5px; text-transform: uppercase;">Inacreditável!</h1>
+            <h2 style="color: #fdf5e6; font-size: 1.4rem; font-weight: normal; margin-bottom: 15px;">Você capturou a <strong style="color: #FFD700;">Chave Mágica!</strong></h2>
+            <p style="color: #ccc; font-size: 1rem; line-height: 1.5; margin-bottom: 25px; border-top: 1px dashed #FFD700; border-bottom: 1px dashed #FFD700; padding: 10px 0;">Seus reflexos foram excepcionais, Aprendiz.<br>O exato milissegundo da sua captura já foi selado no cofre dos Mestres.<br><strong>Aguarde o anúncio oficial da biblioteca!</strong></p>
+            <button id="btn-fechar-vitoria" style="background: linear-gradient(180deg, #FFD700 0%, #B8860B 100%); color: #333; border: none; padding: 12px 30px; font-size: 1.1rem; font-weight: bold; border-radius: 50px; cursor: pointer; text-transform: uppercase;">Guardar Troféu e Sair</button>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIGURAÇÕES DO ALUNO (Troca de Senha) -->
+    <div id="modal-config-aluno" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 100000; padding: 20px;">
+        <div class="modal-conteudo" style="position: relative; max-width: 500px; width: 100%; background: linear-gradient(135deg, #4a1c40 0%, #2d1127 100%); padding: 30px; border-radius: 8px; border: 3px solid #FFD700; text-align: center;">
+            <button id="fechar-config-aluno" style="position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 1.5rem; font-weight: bold; color: #FFD700; cursor: pointer;">✖</button>
+            <h2 style="color: #FFD700; border-bottom: 2px dashed #8c6d46; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase;">⚙️ Seus Segredos</h2>
+            <p style="color: #fdf5e6; font-size: 1rem; margin-bottom: 20px;">Escolha a nova senha para o seu acesso.</p>
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
+                <input type="password" id="input-senha-atual" placeholder="Senha Atual" style="padding: 12px; border: 2px solid #8c6d46; border-radius: 5px; text-align: center; background-color: #fdf5e6;">
+                <input type="password" id="input-nova-senha" placeholder="Nova Senha (6 digitos)" style="padding: 12px; border: 2px solid #FFD700; border-radius: 5px; text-align: center; background-color: #fdf5e6;">
+            </div>
+            <button id="btn-salvar-nova-senha-aluno" class="btn-esmeralda" style="height: 50px; width: 100%; font-size: 1.1rem; border: 2px solid #FFD700; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; text-transform: uppercase;">💾 Gravar Nova Senha</button>
+        </div>
+    </div>
+
+    <!-- MODAL: RESERVAR OBRA (ALUNO) -->
+    <div id="modal-reserva-aluno" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 100000; padding: 20px;">
+        <div class="modal-conteudo" style="position: relative; max-width: 500px; width: 100%; background: linear-gradient(135deg, #1a2a3a 0%, #0d151d 100%); padding: 30px; border-radius: 8px; border: 3px solid #FFD700; text-align: center;">
+            <button id="fechar-modal-reserva" style="position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 1.5rem; font-weight: bold; color: #FFD700; cursor: pointer;">✖</button>
+            <h2 style="color: #FFD700; border-bottom: 2px dashed #8c6d46; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase;">📖 Solicitar Empréstimo</h2>
+            <p style="color: #fdf5e6; font-size: 1rem; margin-bottom: 20px;">Digite o código da Obra que deseja retirar das prateleiras.</p>
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
+                <input type="text" id="input-codigo-reserva" placeholder="" style="padding: 15px; border: 2px solid #FFD700; border-radius: 5px; font-size: 1.2rem; text-align: center; background-color: #fdf5e6; text-transform: uppercase; font-weight: bold; color: #8B0000; outline: none;">
+            </div>
+            <div style="background-color: rgba(255, 215, 0, 0.1); border: 1px dashed #FFD700; padding: 12px; border-radius: 6px; margin-bottom: 20px; text-align: left;">
+                <p style="color: #FFD700; font-size: 0.85rem; font-style: italic; margin: 0;">📜 <strong>Termo Digital:</strong> Ao confirmar, você firma um acordo com a biblioteca.</p>
+            </div>
+            <button id="btn-confirmar-reserva" class="btn-3d btn-esmeralda" style="height: 50px; width: 100%; border: 2px solid #FFD700; border-radius: 6px; cursor: pointer; color: white; font-weight: bold;">🪄 Confirmar Reserva</button>
+        </div>
+    </div>
+
+    <!-- MODAL: CENTRAL DE EMPRÉSTIMOS (GESTÃO) -->
+    <div id="modal-gestao-emprestimos" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.92); z-index: 100000; padding: 20px; box-sizing: border-box; overflow-y: auto;">
+        <div style="position: relative; margin: auto; width: 100%; max-width: 1100px; display: flex; flex-direction: column; background-color: #fdf5e6; padding: 20px 30px 30px 30px; border-radius: 12px; border: 3px solid #8c6d46; box-shadow: 0 0 30px rgba(140, 109, 70, 0.4); box-sizing: border-box;">
+            <button id="fechar-gestao-emprestimos" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 2rem; font-weight: bold; color: #8B0000; cursor: pointer;">✖</button>
+            <h2 style="color: #8B0000; border-bottom: 2px solid #8c6d46; padding-bottom: 10px; margin-top: 0; margin-bottom: 15px; text-align: center; text-transform: uppercase;">📝 Central de Empréstimos</h2>
+            <div style="background: rgba(140, 109, 70, 0.1); border: 2px dashed #8c6d46; padding: 10px 12px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;">
+                <h4 style="color: #5c4033; margin: 0; white-space: nowrap; font-size: 0.9rem; flex-shrink: 0;">⚡ Empréstimo Balcão:</h4>
+                <input type="text" id="input-codigo-balcao" placeholder="Código" style="width: 90px; padding: 7px; border: 2px solid #8c6d46; border-radius: 6px; text-align: center; font-weight: bold; background: #fff; outline: none;">
+                <input type="email" id="input-email-balcao" list="lista-emails-alunos" placeholder="E-mail do Aluno" style="flex: 1; min-width: 0; padding: 7px 10px; border: 2px solid #8c6d46; border-radius: 6px; background: #fff; outline: none;">
+                <button id="btn-emprestar-balcao" style="padding: 7px 12px; font-weight: bold; border: 2px solid #8c6d46; border-radius: 6px; cursor: pointer; color: #8c6d46; background-color: transparent;">🪄 Emprestar</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <h3 style="color: #5c4033; margin: 0; padding-left: 10px; border-left: 5px solid #8B0000;">⏳ Pedidos Online</h3>
+                        <span id="contador-pendentes" style="color: #8c6d46; font-weight: bold; font-size: 0.95rem; border: 1px solid #8c6d46; padding: 2px 10px; border-radius: 12px;">0 de 0</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.7); border: 2px solid #8c6d46; padding: 10px; border-radius: 8px; height: 170px;">
+                        <button id="btn-prev-pendentes" style="background: none; border: none; font-size: 2.5rem; cursor: pointer; color: #8B0000;">&#10094;</button>
+                        <div id="lista-pedidos-pendentes" style="flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"></div>
+                        <button id="btn-next-pendentes" style="background: none; border: none; font-size: 2.5rem; cursor: pointer; color: #8B0000;">&#10095;</button>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <h3 style="color: #5c4033; margin: 0; padding-left: 10px; border-left: 5px solid #4CAF50;">📚 Livros Fora do Acervo</h3>
+                        <span id="contador-ativos" style="color: #2E7D32; font-weight: bold; font-size: 0.95rem; border: 1px solid #2E7D32; padding: 2px 10px; border-radius: 12px;">0 de 0</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.7); border: 2px solid #4CAF50; padding: 10px; border-radius: 8px; height: 170px;">
+                        <button id="btn-prev-ativos" style="background: none; border: none; font-size: 2.5rem; cursor: pointer; color: #4CAF50;">&#10094;</button>
+                        <div id="lista-emprestimos-ativos" style="flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"></div>
+                        <button id="btn-next-ativos" style="background: none; border: none; font-size: 2.5rem; cursor: pointer; color: #4CAF50;">&#10095;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CORREIO CORUJA (ALERTAS DO ALUNO) -->
+    <div id="modal-alertas-aluno" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); z-index: 100000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; backdrop-filter: blur(4px);">
+        <div class="modal-conteudo" style="position: relative; width: 100%; max-width: 600px; background-color: #fdf5e6; padding: 30px; border-radius: 12px; border: 3px solid #8c6d46; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <button onclick="document.getElementById('modal-alertas-aluno').style.display='none'" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 1.8rem; font-weight: bold; color: #8B0000; cursor: pointer;">✖</button>
+            <h2 style="color: #8B0000; border-bottom: 2px solid #8c6d46; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; text-align: center; text-transform: uppercase;">🦉 Correio Coruja</h2>
+            <p style="text-align: center; color: #5c4033; font-style: italic;">Aqui estão os seus avisos mágicos de empréstimo:</p>
+            <div id="conteudo-alertas-aluno" style="display: flex; flex-direction: column; gap: 15px; max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
+    <!-- MODAL: RESULTADO GERAL ÚNICO E BLINDADO -->
+    <div id="modal-resultado" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.95); justify-content: center; align-items: center; z-index: 100005; padding: 20px; overflow-y: auto;">
+        <div class="modal-conteudo" style="position: relative; max-width: 700px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; background-color: #fdf5e6; padding: 20px; border-radius: 8px; border: 2px solid #8c6d46;">
+            <button id="fechar-modal-resultado" onclick="document.getElementById('modal-resultado').style.display='none';" style="position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 1.5rem; font-weight: bold; color: #8B0000; cursor: pointer;" title="Fechar">✖</button>
+            <h2 style="color: #8B0000; border-bottom: 2px solid #8c6d46; padding-bottom: 10px; margin-bottom: 15px; text-align: center;">🏆 Central de Resultados</h2>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; width: 100%;">
+                <button id="btn-tab-chave" style="flex: 1; height: 45px; cursor: pointer; font-weight: bold; background-color: #8c6d46; color: white; border: 2px solid #8c6d46; border-radius: 5px; font-size: 0.95rem;">🗝️ Torneio da Chave</button>
+                <button id="btn-tab-redacao" style="flex: 1; height: 45px; cursor: pointer; font-weight: bold; background-color: transparent; color: #8c6d46; border: 2px solid #8c6d46; border-radius: 5px; font-size: 0.95rem;">✍️ Redação</button>
+                <button id="btn-tab-leitores" style="flex: 1; height: 45px; cursor: pointer; font-weight: bold; background-color: transparent; color: #8c6d46; border: 2px solid #8c6d46; border-radius: 5px; font-size: 0.95rem;">📚 Top Leitores</button>
+            </div>
+            <div id="aba-resultado-chave" style="display: block; flex: 1;">
+                <p style="color: #5c4033; font-style: italic; text-align: center; margin-bottom: 10px; font-size: 0.95rem;">Painel de Honra e Classificação do Torneio da Chave.</p>
+                <div id="lista-resultados-container" style="overflow-y: auto; max-height: 40vh; border: 1px solid #8c6d46; background-color: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px;"></div>
+            </div>
+            <div id="aba-resultado-redacao" style="display: none; flex: 1; text-align: center; padding: 20px;">
+                <h3 style="color: #5c4033; margin-bottom: 10px;">✍️ Concurso de Redação</h3>
+                <p style="color: #333; font-style: italic;">Os resultados e as melhores redações dos aprendizes serão fixados neste mural futuramente.</p>
+            </div>
+            <div id="aba-resultado-leitores" style="display: none; flex-direction: column; flex: 1; text-align: center; padding: 5px 20px; overflow-y: auto;">
+                <h3 style="color: #8B0000; margin-top: 0px; margin-bottom: 2px; font-size: 1.6rem;">📚 O Grande Pódio dos Leitores <br><span id="nome-ciclo-tela" style="font-size: 1.1rem; color: #B8860B; display: block; margin-top: 5px; font-weight: normal;">(Buscando período atual...)</span></h3>
+                <p style="color: #5c4033; font-style: italic; margin-bottom: 5px; font-size: 0.95rem;">Os grandes sábios que mais devoraram as obras do nosso acervo mágico.</p>
+                <div id="podio-leitores-container" style="display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin-top: 5px; min-height: 180px;">
+                    <p style="color: #8c6d46; font-style: italic; margin-top: 20px;">⏳ Consultando os oráculos para formar o pódio...</p>
+                </div>
+                <button onclick="carregarTopLeitores()" class="btn-3d btn-esmeralda" style="margin-top: 10px; margin-bottom: 15px; align-self: center; padding: 10px 25px; border-radius: 6px; border: 2px solid #8c6d46; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">🔄 Atualizar Pódio</button>
+                <div id="painel-gestao-temporada" style="display: none; margin-top: 10px; margin-bottom: 20px; padding: 15px; background: rgba(139, 0, 0, 0.05); border: 2px dashed #8B0000; border-radius: 8px; text-align: left;">
+                    <h4 style="color: #8B0000; margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; text-align: center;">⚙️ Comando da Temporada (Gestão)</h4>
+                    <div style="display: flex; gap: 10px; justify-content: space-between; margin-bottom: 15px; flex-wrap: wrap; width: 100%;">
+                        <button onclick="definirPeriodoCiclo()" style="flex: 1; min-width: 170px; background: #5c4033; color: white; border: none; padding: 10px 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">✏️ Nomear Ciclo</button>
+                        <button onclick="dispararCorujasDeOuro()" style="flex: 1; min-width: 170px; background: #B8860B; color: white; border: none; padding: 10px 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">📢 Os Vencedores</button>
+                        <button onclick="encerrarTemporada()" style="flex: 1; min-width: 170px; background: #8B0000; color: white; border: none; padding: 10px 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">🏁 Encerrar Ciclo</button>
+                    </div>
+                    <div id="status-confirmacoes-podio" style="font-size: 0.9rem; color: #333; background: white; padding: 10px; border-radius: 6px; border: 1px solid #ccc; text-align: center;">
+                        <em style="color: #666;">Aguardando atualização do painel...</em>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🛡️ ESCUDO DE PLATINA: AJUSTE CIRÚRGICO FINAL (CELULAR) -->
+    <style>
+        @media (max-width: 768px) {
+            div[id^="modal-"][style*="display: block"], div[id^="modal-"][style*="display: flex"] {
+                display: flex !important; justify-content: center !important; align-items: center !important; padding: 0 !important; 
+            }
+            .modal-conteudo { width: 92vw !important; max-width: 92vw !important; margin: auto !important; padding: 45px 15px 20px 15px !important; box-sizing: border-box !important; overflow-x: hidden !important; }
+            div[id*="chave"] .modal-conteudo, div[id*="aviso"] .modal-conteudo { width: 85vw !important; max-width: 85vw !important; }
+            .modal-conteudo span[style*="absolute"], .modal-conteudo div[style*="absolute"], .modal-conteudo button[style*="absolute"] {
+                top: 10px !important; right: 15px !important; font-size: 1.8rem !important; z-index: 9999 !important; background: rgba(140, 109, 70, 0.2) !important; border-radius: 50% !important; width: 35px !important; height: 35px !important; display: flex !important; align-items: center !important; justify-content: center !important; margin: 0 !important; padding: 0 !important;
+            }
+            .modal-conteudo h2, .modal-conteudo h3 { margin-top: 0 !important; font-size: 1.3rem !important; line-height: 1.3 !important; text-align: center !important; }
+            .modal-conteudo p, .modal-conteudo b, .modal-conteudo strong, .modal-conteudo span { word-break: break-all !important; overflow-wrap: break-word !important; white-space: normal !important; max-width: 100% !important; }
+            .modal-conteudo input, .modal-conteudo select, .modal-conteudo button:not([style*="absolute"]) { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
+        }
+    </style>
+
+    <!-- ASSINATURA SECRETA & EASTER EGG -->
+    <script>
+    function injetarAssinaturaMagica() {
+        if (document.getElementById("assinatura-jr")) return; 
+        const assinatura = document.createElement("div");
+        assinatura.id = "assinatura-jr"; assinatura.innerHTML = "By Jr"; assinatura.title = "Os segredos do Arquiteto";
+        assinatura.style.cssText = "position: fixed !important; bottom: 20px !important; right: 20px !important; font-size: 1rem !important; font-weight: bold !important; font-family: monospace !important; color: white !important; background-color: #8c6d46 !important; padding: 6px 12px !important; border-radius: 8px !important; border: 2px solid white !important; box-shadow: 0 5px 15px rgba(0,0,0,0.5) !important; cursor: pointer !important; z-index: 2147483647 !important; transition: all 0.3s ease !important;";
+        assinatura.onclick = () => { const mod = document.getElementById("modal-sobre-jr"); if(mod) mod.style.setProperty("display", "flex", "important"); };
+        const modal = document.createElement("div");
+        modal.id = "modal-sobre-jr";
+        modal.style.cssText = "display: none !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(0,0,0,0.8) !important; z-index: 2147483647 !important; align-items: center !important; justify-content: center !important; backdrop-filter: blur(3px) !important;";
+        modal.innerHTML = `
+            <div style="background: white !important; border: 3px solid #8c6d46 !important; border-radius: 12px !important; padding: 25px !important; max-width: 320px !important; width: 90% !important; text-align: center !important; position: relative !important;">
+                <button onclick="document.getElementById('modal-sobre-jr').style.setProperty('display', 'none', 'important')" style="position: absolute !important; top: 10px !important; right: 15px !important; background: none !important; border: none !important; font-size: 1.5rem !important; color: #8B0000 !important; cursor: pointer !important; font-weight: bold !important;">&times;</button>
+                <h2 style="color: #5c4033 !important; font-size: 1.4rem !important; border-bottom: 1px dashed rgba(140,109,70,0.3) !important; padding-bottom: 10px !important; font-family: serif !important; margin-top: 5px !important;">✨ Os Criadores ✨</h2>
+                <div style="text-align: left !important; background: rgba(140, 109, 70, 0.1) !important; padding: 10px 15px !important; border-radius: 8px !important; font-size: 0.9rem !important; color: #5c4033 !important; margin-bottom: 15px !important;">
+                    <strong>🪄 Desenvolvedor:</strong> Júnior<br>
+                </div>
+            </div>`;
+        document.documentElement.appendChild(modal); document.documentElement.appendChild(assinatura);
+    }
+    document.addEventListener("DOMContentLoaded", injetarAssinaturaMagica);
+    setTimeout(injetarAssinaturaMagica, 1500);
+    </script>
+
+    <!-- FUNÇÃO PARA ABRIR O RESULTADO GERAL DE FORMA BLINDADA -->
+    <script>
+    function abrirResultadoGeral() {
+        var modal = document.getElementById('modal-resultado');
+        if (modal) {
+            modal.style.setProperty('display', 'flex', 'important');
+            modal.style.setProperty('z-index', '100005', 'important');
+        }
+    }
+    </script>
+
+    <!-- INVOCAÇÃO DOS SCRIPTS (UMA ÚNICA VEZ) -->
+    <script type="module" src="app.js"></script>
+    <script type="module" src="script.js"></script>
+</body>
+</html>
