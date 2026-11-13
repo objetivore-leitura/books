@@ -2691,6 +2691,11 @@ window.verificarAlertas = async function(emailUsuario, nivelUsuario) {
     
     if (!emailUsuario) return;
     
+    // 👉 DISPARA A BUSCA DOS RESULTADOS DA REDAÇÃO AUTOMATICAMENTE AQUI!
+    if (typeof carregarResultadosAluno === 'function') {
+        carregarResultadosAluno();
+    }
+    
     const nivel = nivelUsuario ? String(nivelUsuario).toLowerCase().trim() : "aluno";
     
     if (nivel === "adm" || nivel === "admin" || nivel === "gestao" || nivel === "gestão" || nivel === "direcao" || nivel === "direção") {
@@ -2714,9 +2719,6 @@ window.verificarAlertas = async function(emailUsuario, nivelUsuario) {
 
         const qAluno = query(collection(db, "emprestimos"), where("alunoEmail", "==", emailUsuario), where("devolvido", "==", false));
         // ... (O restante da função do aluno continua exatamente igual a partir daqui!)
-
-
-
 
 
         const snapshot = await getDocs(qAluno);
@@ -4169,8 +4171,7 @@ function alternarAbaGestao(nomeAba) {
         btnAtivo.classList.add('ativa');
     }
 
-    // 5. CHAMA AS FUNÇÕES DE CARREGAMENTO ESPECÍFICAS DE CADA FERRAMENTA
-    // (Ajuste os nomes das funções abaixo para os nomes reais das suas funções caso sejam diferentes)
+// 5. CHAMA AS FUNÇÕES DE CARREGAMENTO ESPECÍFICAS DE CADA FERRAMENTA
     if (nomeAba === 'acervo') {
         if (typeof carregarObrasGestao === 'function') carregarObrasGestao();
         else if (typeof renderizarListaGestao === 'function') renderizarListaGestao();
@@ -4180,10 +4181,17 @@ function alternarAbaGestao(nomeAba) {
         if (typeof carregarEtiquetas === 'function') carregarEtiquetas();
     } else if (nomeAba === 'concurso') {
         if (typeof carregarConcurso === 'function') carregarConcurso();
+        
+        // 👉 AQUI ESTÁ A MÁGICA: Sempre que o aluno abrir a aba concurso, carrega os resultados dele!
+        if (typeof carregarResultadosAluno === 'function') {
+            carregarResultadosAluno();
+        }
     } else if (nomeAba === 'moderacao') {
         if (typeof carregarModeracao === 'function') carregarModeracao();
     }
 }
+
+
 
 function abrirModalGestao() {
     const modal = document.getElementById('modal-gestao');
@@ -4545,3 +4553,1126 @@ document.getElementById('btn-imprimir-etiquetas')?.addEventListener('click', () 
     janelaImpressao.document.write(docHTML);
     janelaImpressao.document.close();
 });
+
+
+// ==========================================
+// 🛡️ MODERAÇÃO DO MURAL INTERATIVO
+// ==========================================
+const NOME_COLECAO_MURAL = "mural"; // Criamos a coleção agora!
+
+// 1. Busca no Firebase apenas as mensagens com status "pendente"
+async function carregarModeracao() {
+    const listaHtml = document.getElementById('lista-mensagens-pendentes');
+    const contador = document.getElementById('contador-moderacao');
+    const btnAtualizar = document.getElementById('btn-atualizar-moderacao');
+    
+    if (!listaHtml) return;
+
+    btnAtualizar.innerText = "⏳ Buscando...";
+    btnAtualizar.disabled = true;
+    listaHtml.innerHTML = '<p style="text-align: center; color: #8c6d46; font-weight: bold;">Verificando novos recados no mural...</p>';
+
+    try {
+        const q = query(collection(db, NOME_COLECAO_MURAL), where("status", "==", "pendente"));
+        const snap = await getDocs(q);
+        
+        contador.innerText = snap.size; 
+        
+        if (snap.empty) {
+            // AQUI ESTAVA O SEGREDO: Removi o "return;" para que o código continue rodando até o final!
+            listaHtml.innerHTML = '<p style="text-align: center; color: #2E7D32; font-weight: bold; margin-top: 40px; font-size: 1.1rem;">✨ Tudo limpo! Nenhuma mensagem aguardando moderação.</p>';
+        } else {
+            let htmlCartoes = '';
+            snap.forEach((docSnap) => {
+                const recado = docSnap.data();
+                const idRecado = docSnap.id;
+                
+// 🛡️ MÁGICA DO CATÁLOGO: Letras Maiúsculas/Minúsculas elegantes em TUDO!
+                let rawAluno = recado.aluno || "Aluno Anônimo";
+                let rawLivro = recado.livro || "Mural Geral";
+                let rawTexto = recado.mensagem || "";
+                let emailRegistrado = recado.emailAluno || recado.email || "E-mail não registrado no envio";
+                
+                const alunoNome = typeof capitalizar === 'function' ? capitalizar(rawAluno) : rawAluno;
+                const livroTitulo = typeof capitalizar === 'function' ? capitalizar(rawLivro) : rawLivro;
+                const textoFormatado = typeof capitalizar === 'function' ? capitalizar(rawTexto) : rawTexto;
+                
+                const dataEnvio = recado.criadoEm ? new Date(recado.criadoEm.toDate()).toLocaleDateString('pt-BR') : "Data recente";
+
+                htmlCartoes += `
+                    <div id="cartao-${idRecado}" style="border: 2px solid #8c6d46; border-left: 8px solid #B8860B; border-radius: 8px; padding: 15px; background: white; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px;">
+                            <div>
+                                <strong style="color: #5c4033; font-size: 1.1rem;">👤 ${alunoNome}</strong><br>
+                                <span style="font-size: 0.85rem; color: #888; font-family: monospace;">📧 ${emailRegistrado}</span><br>
+                                <span style="font-size: 0.85rem; color: #666;">📚 Sobre: <strong>${livroTitulo}</strong> | 📅 ${dataEnvio}</span>
+                            </div>
+                            <div style="background-color: #fdf5e6; color: #8c6d46; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; border: 1px solid #8c6d46;">PENDENTE</div>
+                        </div>
+                        
+                        <div style="font-size: 0.95rem; color: #333; line-height: 1.5; margin-bottom: 15px; font-style: italic;">
+                            "${textoFormatado}"
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="julgarRecadoMural('${idRecado}', 'rejeitar')" style="flex: 1; max-width: 120px; height: 38px; background-color: #8B0000; color: white; border: 2px solid #5c2018; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.backgroundColor='#5c2018'" onmouseout="this.style.backgroundColor='#8B0000'">❌ Apagar</button>
+                            
+                            <button onclick="julgarRecadoMural('${idRecado}', 'aprovar')" style="flex: 1; max-width: 120px; height: 38px; background-color: #2E7D32; color: white; border: 2px solid #1b5e20; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.backgroundColor='#1b5e20'" onmouseout="this.style.backgroundColor='#2E7D32'">✅ Aprovar</button>
+                        </div>
+                    </div>
+                `;
+
+            });
+            
+            listaHtml.innerHTML = htmlCartoes;
+        }
+
+    } catch (error) {
+        console.error("Erro na moderação:", error);
+        listaHtml.innerHTML = '<p style="text-align: center; color: red;">Erro ao acessar o mural. Verifique a conexão com o banco mágico.</p>';
+    } finally {
+        btnAtualizar.innerText = "🔄 Atualizar Lista";
+        btnAtualizar.disabled = false;
+    }
+
+    // 👉 PASSO 3 APLICADO AQUI: Gatilho que carrega os recados antigos logo após carregar os pendentes
+    if (typeof carregarRecadosAprovados === 'function') {
+        carregarRecadosAprovados();
+    }
+}
+
+
+
+// ==========================================
+// 🛡️ O MARTELO DA GESTÃO (APROVA/APAGA) - BLINDADO EXCLUSIVO PARA ADM
+// ==========================================
+window.julgarRecadoMural = async function(idDoc, acao) {
+    // 1. Resgata o nível da janela ou do armazenamento local para evitar perda de sessão
+    const nivel = window.usuarioNivelAtual || localStorage.getItem('nivelUsuario');
+
+    // 2. Trava estrita: APENAS 'adm' passa. 'gestao' ou 'aluno' são sumariamente bloqueados.
+    if (nivel !== 'adm') {
+        alert("⛔ Acesso Negado! Apenas os Administradores Supremos podem julgar os recados do mural.");
+        return;
+    }
+
+    const confirmacao = confirm(acao === 'aprovar' 
+        ? "✅ Tem certeza que deseja APROVAR esta mensagem para todos verem?" 
+        : "❌ Tem certeza que deseja APAGAR esta mensagem permanentemente?");
+    
+    if (!confirmacao) return;
+
+    try {
+        const docRef = doc(db, NOME_COLECAO_MURAL, idDoc);
+        
+        if (acao === 'aprovar') {
+            await updateDoc(docRef, { status: "aprovado" });
+            alert("✨ Mensagem aprovada! Ela já está visível no mural.");
+        } else {
+            await deleteDoc(docRef);
+            alert("🗑️ Mensagem apagada com sucesso.");
+        }
+        
+        // Recarrega a lista da moderação para refletir a mudança visualmente
+        if (typeof carregarModeracao === 'function') {
+            carregarModeracao();
+        }
+        
+    } catch (error) {
+        console.error("Erro ao julgar recado:", error);
+        alert("Erro ao processar a ação. O sistema bloqueou a tentativa.");
+    }
+};
+
+
+
+// 3. Liga o botão de atualizar e faz o painel carregar ao ser aberto
+document.getElementById('btn-atualizar-moderacao')?.addEventListener('click', carregarModeracao);
+
+
+// ==========================================
+// 🗣️ ESPAÇO INTERATIVO: ENVIO DE RESENHAS (ALUNO)
+// ==========================================
+document.getElementById('btn-enviar-mural')?.addEventListener('click', async () => {
+    const nome = document.getElementById('mural-nome-aluno').value.trim();
+    const assunto = document.getElementById('mural-livro-assunto').value.trim();
+    const texto = document.getElementById('mural-texto-mensagem').value.trim();
+    const btnEnviar = document.getElementById('btn-enviar-mural');
+
+    // 1. Validação: Impede envios em branco
+    if (!nome || !assunto || !texto) {
+        alert("Atenção, aprendiz! Todos os campos devem ser preenchidos para enviar sua mensagem.");
+        return;
+    }
+
+    // 2. Proteção visual para evitar duplo clique
+    const textoOriginal = btnEnviar.innerHTML;
+    btnEnviar.innerHTML = "⏳ Enviando aos mestres...";
+    btnEnviar.disabled = true;
+
+    try {
+        // 👇 CAPTURA SILENCIOSA DO E-MAIL 👇
+        const usuarioAtual = auth.currentUser;
+        const emailDoAluno = usuarioAtual ? usuarioAtual.email : "E-mail não identificado";
+
+        // 🌟 O FEITIÇO DAS LETRAS (Capitalização antes de salvar) 🌟
+        const nomeFmt = typeof capitalizar === 'function' ? capitalizar(nome) : nome;
+        const assuntoFmt = typeof capitalizar === 'function' ? capitalizar(assunto) : assunto;
+        
+        // Garante que pelo menos a primeira letra da mensagem inteira seja maiúscula
+        const textoFmt = texto.charAt(0).toUpperCase() + texto.slice(1);
+
+        // 3. O Envio Silencioso para a coleção "mural" (com E-MAIL e LETRAS AJUSTADAS)
+        await addDoc(collection(db, "mural"), {
+            aluno: nomeFmt,
+            livro: assuntoFmt,
+            mensagem: textoFmt,
+            emailAluno: emailDoAluno, 
+            status: "pendente", 
+            criadoEm: new Date()
+        });
+
+        // 🔥 GATILHO DO LOG (Auditoria do Sistema com E-mail) 🔥
+        if (typeof registrarLog === 'function') {
+            registrarLog(`Deixou um recado no Mural: "${assuntoFmt}" | Autor: ${nomeFmt} (${emailDoAluno})`);
+        }
+
+        alert("✨ Resenha enviada com sucesso aos mestres da biblioteca! Após a avaliação, ela brilhará no nosso mural.");
+        
+        // 4. Limpa o formulário para o próximo aluno
+        document.getElementById('mural-nome-aluno').value = "";
+        document.getElementById('mural-livro-assunto').value = "";
+        document.getElementById('mural-texto-mensagem').value = "";
+        
+        // 5. Retorna o aluno para a primeira aba
+        if (typeof trocarAbaInterativa === 'function') {
+            trocarAbaInterativa('mural-publico');
+        }
+
+    } catch (error) {
+        console.error("Erro ao enviar recado:", error);
+        alert("❌ Uma falha mágica impediu o envio. Verifique a conexão.");
+    } finally {
+        btnEnviar.innerHTML = textoOriginal;
+        btnEnviar.disabled = false;
+    }
+});
+
+// ==========================================
+// 🗣️ EXIBIÇÃO PÚBLICA DO MURAL (LIMITADO ÀS 15 MAIS RECENTES)
+// ==========================================
+window.carregarMuralPublico = async function() {
+    const listaHtml = document.getElementById('lista-mural-publico');
+    if (!listaHtml) return;
+
+    listaHtml.innerHTML = '<p style="text-align: center; color: #8c6d46; font-style: italic;">⏳ Desenterrando os recados mágicos...</p>';
+
+    try {
+        // Busca as mensagens aprovadas pela Gestão
+        const q = query(collection(db, NOME_COLECAO_MURAL), where("status", "==", "aprovado"));
+        const snap = await getDocs(q);
+        
+        if (snap.empty) {
+            listaHtml.innerHTML = '<p style="text-align: center; color: #8c6d46; font-style: italic; margin-top: 40px; font-size: 1.1rem;">O mural está em silêncio... 🤫<br><br>Seja o primeiro aprendiz a deixar sua marca!</p>';
+            return;
+        }
+
+        let recados = [];
+        snap.forEach((docSnap) => {
+            recados.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        // 1. Ordena das mais recentes para as mais antigas
+        recados.sort((a, b) => {
+            const dataA = a.criadoEm && a.criadoEm.toDate ? a.criadoEm.toDate() : new Date(0);
+            const dataB = b.criadoEm && b.criadoEm.toDate ? b.criadoEm.toDate() : new Date(0);
+            return dataB - dataA;
+        });
+
+        // 2. Trava para exibir apenas as últimas 30 resenhas
+        const recadosExibir = recados.slice(0, 30);
+
+        let htmlCartoes = '';
+        recadosExibir.forEach((recado) => {
+            let rawAluno = recado.aluno || "Anónimo";
+            let rawLivro = recado.livro || "Mural Geral";
+            let rawTexto = recado.mensagem || "";
+            
+            const alunoNome = typeof capitalizar === 'function' ? capitalizar(rawAluno) : rawAluno;
+            const livroTitulo = typeof capitalizar === 'function' ? capitalizar(rawLivro) : rawLivro;
+            const textoFormatado = typeof capitalizar === 'function' ? capitalizar(rawTexto) : rawTexto;
+            
+            const dataEnvio = recado.criadoEm && recado.criadoEm.toDate ? new Date(recado.criadoEm.toDate()).toLocaleDateString('pt-BR') : "";
+
+            htmlCartoes += `
+                <div style="background: rgba(255, 255, 255, 0.9); border: 1px solid #8c6d46; border-left: 6px solid #8B0000; border-radius: 8px; padding: 15px; box-shadow: 0 3px 6px rgba(0,0,0,0.08); margin-bottom: 12px; transition: 0.3s;" onmouseover="this.style.transform='scale(1.01)'" onmouseout="this.style.transform='scale(1)'">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding-bottom: 8px; margin-bottom: 10px;">
+                        <strong style="color: #8B0000; font-size: 1.1rem;">👤 ${alunoNome}</strong>
+                        <span style="font-size: 0.8rem; color: #666; font-weight: bold;">📅 ${dataEnvio}</span>
+                    </div>
+                    <div style="font-size: 0.9rem; color: #5c4033; margin-bottom: 10px;">
+                        📚 Sobre a obra: <strong>${livroTitulo}</strong>
+                    </div>
+                    <div style="font-size: 1.05rem; color: #333; font-style: italic; line-height: 1.5;">
+                        "${textoFormatado}"
+                    </div>
+                </div>
+            `;
+        });
+        
+        listaHtml.innerHTML = htmlCartoes;
+
+    } catch (error) {
+        console.error("Erro ao carregar o mural público:", error);
+        listaHtml.innerHTML = '<p style="text-align: center; color: red;">As neblinas mágicas bloquearam a leitura do mural. Tente novamente mais tarde.</p>';
+    }
+};
+
+
+
+
+// ==========================================
+// 🛡️ SISTEMA ANTI-CHEAT (CALIGRAFIA DIGITAL)
+// ==========================================
+const bancoDePerguntasAntiCheat = [
+    "Qual a sua opinião em relação ao efeito estufa e as mudanças climáticas?",
+    "O que você faria de mais importante caso você fosse Presidente do Brasil?",
+    "Se você pudesse viajar no tempo, para qual época iria e por quê?",
+    "Na sua opinião, qual é a maior qualidade que um ser humano pode ter?",
+    "Como você imagina que será a tecnologia e as escolas daqui a 50 anos?",
+    "Qual é o livro, série ou filme que mais marcou sua vida e qual o motivo?",
+    "Se você tivesse que criar uma nova regra para a sua escola, qual seria?",
+    "Qual invenção tecnológica você acha que mudou mais o mundo e por quê?",
+    "Se pudesse ter uma conversa de uma hora com qualquer figura histórica, quem seria e o que perguntaria?",
+    "O que significa ter sucesso na vida para você?",
+    "Se você fosse um animal, qual seria e quais características suas combinam com ele?",
+    "Como você explicaria a internet para alguém que viveu no século XIX?",
+    "Qual é o maior desafio que a sua geração enfrenta atualmente?",
+    "Se você tivesse um orçamento infinito para resolver um problema mundial, qual seria e como agiria?",
+    "Qual matéria escolar você acha que deveria ser ensinada, mas não é?",
+    "Descreva um momento em que você teve que superar um medo. Como foi?",
+    "Se você escrevesse um livro sobre a sua vida até agora, qual seria o título do primeiro capítulo?",
+    "O que você prefere: ler um livro físico ou digital? Explique os seus motivos.",
+    "Na sua opinião, a inteligência artificial vai ajudar ou prejudicar a humanidade no futuro?",
+    "Qual é a sua lembrança mais antiga e por que você acha que não a esqueceu?"
+];
+
+window.abrirTesteAutenticidade = function() {
+    // Sorteia 3 perguntas aleatórias do banco
+    const perguntasSorteadas = [...bancoDePerguntasAntiCheat].sort(() => 0.5 - Math.random()).slice(0, 3);
+    const container = document.getElementById('container-perguntas-sorteadas');
+    
+    let htmlForm = "";
+    perguntasSorteadas.forEach((pergunta, index) => {
+        htmlForm += `
+            <div style="background: rgba(140, 109, 70, 0.1); padding: 10px; border-radius: 6px; border-left: 4px solid #B8860B;">
+                <label style="font-weight: bold; color: #5c4033; font-size: 0.9rem; display: block; margin-bottom: 5px;">${index + 1}. ${pergunta}</label>
+                <textarea class="resposta-anti-cheat" placeholder="Escreva sua resposta detalhada aqui..." style="width: 100%; height: 60px; padding: 10px; border: 1px solid #8c6d46; border-radius: 4px; resize: none; outline: none; font-family: inherit; font-size: 0.9rem; box-sizing: border-box;"></textarea>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = htmlForm;
+    document.getElementById('modal-anti-cheat').style.display = 'flex';
+};
+
+
+
+window.validarEDesbloquear = function() {
+    const respostas = document.querySelectorAll('.resposta-anti-cheat');
+    let todasValidas = true;
+
+    // A validação: o aluno não pode colocar só "sim" ou "não". Mínimo de 15 letras.
+    respostas.forEach(resp => {
+        if (resp.value.trim().length < 15) {
+            todasValidas = false;
+        }
+    });
+
+    if (!todasValidas) {
+        alert("⚠️ Os mestres exigem respostas mais completas! Desenvolva melhor suas ideias para provar sua caligrafia digital.");
+        return;
+    }
+
+    // Se passou, destranca tudo!
+    document.getElementById('modal-anti-cheat').style.display = 'none';
+    
+    // 1. Some com o escudo invisível
+    document.getElementById('escudo-bloqueio-redacao').style.display = 'none';
+    
+    // 2. Some com o botão piscante
+    document.getElementById('container-desbloqueio-redacao').style.display = 'none';
+    
+    // 3. Tira a opacidade da tela
+    document.getElementById('campos-redacao-wrapper').style.opacity = '1';
+    
+    // 4. Habilita os inputs (tirando a cara de desativado e devolvendo as cores reais)
+    const inputs = ['concurso-nome-aluno', 'concurso-turma-aluno', 'concurso-texto-redacao'];
+    inputs.forEach(id => {
+        const campo = document.getElementById(id);
+        campo.disabled = false;
+        campo.style.background = 'rgba(255,255,255,0.9)';
+        campo.style.cursor = 'text';
+        campo.style.border = '2px solid #8c6d46';
+    });
+    document.getElementById('concurso-turma-aluno').style.cursor = 'pointer';
+    document.getElementById('concurso-texto-redacao').placeholder = "Digite sua redação aqui... (Máx: 2500 caracteres)";
+    
+    // 5. Acende o botão de submeter
+    const btnSubmeter = document.getElementById('btn-enviar-redacao');
+    btnSubmeter.disabled = false;
+    btnSubmeter.style.cursor = 'pointer';
+    btnSubmeter.style.backgroundColor = '#8B0000';
+    btnSubmeter.style.borderColor = '#5c2018';
+    
+    alert("✨ Autenticidade confirmada! O pergaminho foi desbloqueado para você.");
+};
+
+
+
+// ==========================================
+// 🛡️ AÇÃO 5: CARREGAR DADOS E VALIDAR PRAZO
+// ==========================================
+function inicializarPainelRedacao() {
+    // 1. Ponto de conexão com o seu Firebase (Substitua pelos dados reais que vêm do banco)
+    // Exemplo: firebase.database().ref('concursoAtual').once('value').then((snapshot) => { ... })
+    const dadosBanco = {
+        tema: "O Poder Transformador da Leitura", // Vem de gestao-tema-redacao
+        regras: "A Banca Digital avaliará rigorosamente a norma padrão...", // Vem de gestao-regras-redacao
+        dataInicio: "2026-10-25", // Vem de concurso-data-inicio (Formato YYYY-MM-DD)
+        dataFim: "2026-10-31"     // Vem de concurso-data-fim (Formato YYYY-MM-DD)
+    };
+
+    // 2. Injetar o Tema e as Regras no pergaminho do aluno
+    document.getElementById('aluno-tema-redacao').innerHTML = `<strong>Tema Oficial:</strong> ${dadosBanco.tema}`;
+    document.getElementById('aluno-regras-redacao').innerHTML = `<strong>Parâmetros:</strong> ${dadosBanco.regras}`;
+
+    // 3. Validação Cirúrgica de Datas
+    const hoje = new Date();
+    
+    // Forçar o fuso horário correto garantindo que a data do banco seja lida como meia-noite local
+    const dataInicioValida = new Date(`${dadosBanco.dataInicio}T00:00:00`);
+    const dataFimValida = new Date(`${dadosBanco.dataFim}T23:59:59`); // Até o último segundo do dia final
+
+    const containerDesbloqueio = document.getElementById('container-desbloqueio-redacao');
+    const escudoBloqueio = document.getElementById('escudo-bloqueio-redacao');
+
+    // 4. Lógica de Bloqueio
+    if (hoje < dataInicioValida || hoje > dataFimValida) {
+        // FORA DO PRAZO: Destrói o botão do Anti-Cheat e exibe o aviso vermelho
+        containerDesbloqueio.innerHTML = `
+            <div style="background-color: #8B0000; color: white; padding: 15px; border-radius: 8px; border: 2px solid #5c2018; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                <h4 style="margin: 0 0 5px 0; font-size: 1.1rem; text-transform: uppercase;">🚫 Concurso Fechado</h4>
+                <p style="margin: 0; font-size: 0.9rem;">O período de envio das redações não está ativo no momento.</p>
+            </div>
+        `;
+        
+        // Altera a mensagem do escudo invisível para refletir a recusa total
+        escudoBloqueio.setAttribute('onclick', "alert('⚠️ O cofre da Banca Digital está trancado! Você está fora do período do concurso.')");
+    } 
+    // Se estiver NO PRAZO, o JavaScript não altera a estrutura de bloqueio original, 
+    // permitindo que o aluno clique no botão piscante e abra o Teste de Autenticidade normalmente.
+}
+
+// Executa a magia assim que a aba do aluno for carregada
+document.addEventListener('DOMContentLoaded', inicializarPainelRedacao);
+
+
+
+// ==========================================
+// 🏆 GESTÃO: SALVAR TEMA DO CONCURSO
+// ==========================================
+window.salvarConfiguracaoConcurso = async function() {
+    // 🛡️ ESCUDO DE PLATINA
+    if (window.usuarioNivelAtual !== 'gestao' && window.usuarioNivelAtual !== 'adm') {
+        alert("⛔ Acesso Negado! Apenas os Mestres da biblioteca podem definir os temas.");
+        return;
+    }
+
+    const tema = document.getElementById('gestao-tema-redacao').value.trim();
+    const regras = document.getElementById('gestao-regras-redacao').value.trim();
+
+    if (!tema || !regras) {
+        alert("⚠️ Os pergaminhos estão vazios! Preencha o Título do Tema e as Regras antes de salvar.");
+        return;
+    }
+
+    const btnSalvar = document.querySelector('button[onclick="salvarConfiguracaoConcurso()"]');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = "⏳ Gravando no Banco Mágico...";
+    btnSalvar.disabled = true;
+
+    try {
+        // Salva em um documento fixo (usamos 'setDoc' para sobrescrever sempre o mesmo arquivo)
+        const docRef = doc(db, "sistema", "concurso_redacao");
+        
+        await setDoc(docRef, {
+            temaAtual: tema,
+            regrasAtuais: regras,
+            atualizadoEm: new Date()
+        }, { merge: true }); // O merge garante que não apague outros dados se existirem no futuro
+
+        alert("✨ Tema do concurso atualizado com sucesso! A partir de agora, os alunos já verão este novo tema.");
+        
+    } catch (error) {
+        console.error("Erro ao salvar tema:", error);
+        alert("❌ Uma falha mágica impediu o salvamento das configurações.");
+    } finally {
+        btnSalvar.innerHTML = textoOriginal;
+        btnSalvar.disabled = false;
+    }
+};
+
+
+// ==========================================
+// 📖 ALUNO: CARREGAR TEMA DA REDAÇÃO
+// ==========================================
+window.carregarTemaConcurso = async function() {
+    try {
+        const docRef = doc(db, "sistema", "concurso_redacao");
+        const docSnap = await getDoc(docRef);
+        
+        const elementoTema = document.getElementById('aluno-tema-redacao');
+        const elementoRegras = document.getElementById('aluno-regras-redacao');
+        
+        if (!elementoTema || !elementoRegras) return; 
+        
+        if (docSnap.exists()) {
+            const dados = docSnap.data();
+            
+            // 🛡️ Aplicando a Regra da Capitalização (Maiúscula/Minúscula)
+            let temaBruto = dados.temaAtual || "";
+            let regrasBrutas = dados.regrasAtuais || "";
+            
+            const temaFormatado = typeof capitalizar === 'function' ? capitalizar(temaBruto) : temaBruto;
+            const regrasFormatadas = typeof capitalizar === 'function' ? capitalizar(regrasBrutas) : regrasBrutas;
+            
+            elementoTema.innerText = '"' + temaFormatado + '"';
+            elementoRegras.innerText = regrasFormatadas;
+        } else {
+            elementoTema.innerText = "Nenhum tema definido no momento.";
+            elementoRegras.innerText = "Aguarde as instruções da Gestão da Biblioteca.";
+        }
+    } catch (error) {
+        console.error("Erro ao buscar o tema:", error);
+        if (document.getElementById('aluno-tema-redacao')) {
+            document.getElementById('aluno-tema-redacao').innerText = "Erro ao carregar o tema mágico.";
+        }
+    }
+};
+
+
+// ==========================================
+// ✍️ ALUNO: SUBMETER REDAÇÃO À BANCA
+// ==========================================
+window.enviarRedacaoAluno = async function() {
+    const nome = document.getElementById('concurso-nome-aluno').value.trim();
+    const turma = document.getElementById('concurso-turma-aluno').value;
+    const texto = document.getElementById('concurso-texto-redacao').value.trim();
+    const btnEnviar = document.getElementById('btn-enviar-redacao');
+
+    // 1. Validação Básica de Segurança
+    if (!nome || !turma || texto.length < 50) {
+        alert("⚠️ Atenção! Preencha seu nome, selecione a turma e escreva pelo menos 50 caracteres na sua redação.");
+        return;
+    }
+
+    // 2. Efeito Visual de Carregamento
+    const textoOriginal = btnEnviar.innerHTML;
+    btnEnviar.innerHTML = "⏳ Enviando Coruja...";
+    btnEnviar.disabled = true;
+
+    try {
+        // 3. Empacota e envia para a nova coleção "redacoes"
+        await addDoc(collection(db, "redacoes"), {
+            nomeAluno: nome,
+            turmaAluno: turma,
+            textoRedacao: texto,
+            status: "pendente", // Fica pendente até a Gestão e a IA avaliarem
+            dataEnvio: new Date()
+        });
+
+        alert("✨ Magnífico! Sua redação foi entregue aos Mestres da Banca Digital. Boa sorte!");
+        
+        // 4. Limpa o pergaminho após o envio
+        document.getElementById('concurso-texto-redacao').value = "";
+        document.getElementById('contador-redacao').innerText = "0";
+        
+    } catch (error) {
+        console.error("Erro ao enviar redação:", error);
+        alert("❌ Um feitiço de bloqueio impediu o envio. Verifique sua conexão e tente novamente!");
+    } finally {
+        btnEnviar.innerHTML = textoOriginal;
+        btnEnviar.disabled = false; // Como o anti-cheat já destrancou a tela, o botão volta a ficar clicável
+    }
+};
+
+
+
+// ==========================================
+// 🛡️ GESTÃO: BUSCAR REDAÇÕES PENDENTES (CORRIGIDO)
+// ==========================================
+window.buscarRedacoesPendentes = async function() {
+    const lista = document.getElementById('lista-redacoes-gestao');
+    if (!lista) return;
+
+    lista.innerHTML = '<p style="text-align: center; color: #8c6d46; font-style: italic;">⏳ Invocando os pergaminhos...</p>';
+
+    try {
+        const q = query(collection(db, "redacoes"), where("status", "in", ["pendente", "aguardando_ia"]));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            lista.innerHTML = '<p style="text-align: center; color: #2E7D32; font-weight: bold; margin-top: 10px;">✨ Pilha vazia! Nenhuma redação pendente no momento.</p>';
+            return;
+        }
+
+        lista.innerHTML = ''; 
+
+        querySnapshot.forEach((docSnap) => {
+            const dados = docSnap.data();
+            const id = docSnap.id;
+            
+            // 🌟 Alinhado exatamente com as chaves salvas pelo aluno (aluno, turma, redacao)
+            const nomeAluno = dados.aluno || "Aluno Anônimo";
+            const turmaAluno = dados.turma || "Turma não informada";
+            const textoRedacao = dados.redacao || "";
+            
+            const cartao = document.createElement('div');
+            cartao.style.cssText = "background: white; border: 2px solid #8c6d46; border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 8px;";
+            
+cartao.innerHTML = `
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding-bottom: 5px;">
+                    <strong style="color: #8B0000; font-size: 1.05rem; text-transform: capitalize;">🎓 ${nomeAluno}</strong>
+                    <span style="background: #e9e9e9; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; color: #5c4033; border: 1px solid #ccc;">${turmaAluno}</span>
+                </div>
+                <p style="font-size: 0.9rem; color: #333; margin: 0; max-height: 60px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; font-style: italic;">"${textoRedacao}"</p>
+                <div style="display: flex; gap: 8px; margin-top: 5px;">
+                    <button onclick="avaliarRedacaoComIA('${id}', this)" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'" style="flex: 1; background: #2E7D32; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 0.8rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: all 0.1s ease-in-out;">🤖 Avaliar (IA)</button>
+                    <button onclick="deletarRedacao('${id}')" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'" style="background: #c0392b; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 0.8rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: all 0.1s ease-in-out;">🗑️ Apagar</button>
+                </div>
+            `;
+            
+            lista.appendChild(cartao);
+        });
+
+    } catch (error) {
+        console.error("Erro ao buscar redações:", error);
+        lista.innerHTML = '<p style="text-align: center; color: #8B0000; font-weight: bold;">❌ Falha ao consultar os arquivos. Tente novamente.</p>';
+    }
+};
+
+
+
+
+// ==========================================
+// 🗑️ GESTÃO: APAGAR REDAÇÃO DE TESTE
+// ==========================================
+window.deletarRedacao = async function(idRedacao) {
+    if (!confirm("Tem certeza que deseja apagar esta redação de teste?")) {
+        return;
+    }
+
+    try {
+        await deleteDoc(doc(db, "redacoes", idRedacao));
+        alert("🗑️ Redação apagada com sucesso!");
+        
+        // Atualiza a pilha na tela
+        if (typeof buscarRedacoesPendentes === 'function') {
+            buscarRedacoesPendentes();
+        }
+    } catch (error) {
+        console.error("Erro ao apagar redação:", error);
+        alert("❌ Erro ao apagar a redação: " + error.message);
+    }
+};
+
+
+
+
+// ==========================================
+// 🤖 GESTÃO: AVALIAR REDAÇÃO COM IA (COM ANIMAÇÃO TÁTIL E REPETIÇÃO)
+// ==========================================
+window.avaliarRedacaoComIA = async function(idRedacao, botaoHtml) {
+    const CHAVE_API_GEMINI = "AQ.Ab8RN6IqDb4CRueZEAR_-DORPXQjyIX4dmG48oNgEqRxeyKpSw"; 
+    
+    if (!CHAVE_API_GEMINI || CHAVE_API_GEMINI.includes("SUA_CHAVE")) {
+        alert("⚠️ Alto lá! Insira a sua chave da API do Gemini.");
+        return;
+    }
+
+    // 🌟 MÁGICA VISUAL: Reação imediata no botão!
+    let textoOriginalBotao = "";
+    if (botaoHtml) {
+        textoOriginalBotao = botaoHtml.innerHTML;
+        botaoHtml.innerHTML = "⏳ Lendo Pergaminho...";
+        botaoHtml.style.backgroundColor = "#f39c12"; // Fica laranja enquanto pensa
+        botaoHtml.style.opacity = "0.8";
+        botaoHtml.disabled = true;
+    }
+
+    try {
+        const docRef = doc(db, "redacoes", idRedacao);
+        const docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists()) {
+            alert("❌ Pergaminho não encontrado no banco de dados.");
+            if (botaoHtml) restaurarBotaoIA(botaoHtml, textoOriginalBotao);
+            return;
+        }
+        
+        const dadosRedacao = docSnap.data();
+        
+        // 🎯 O BUG ESTAVA AQUI! Ajustado para ler o campo "redacao" exato do banco.
+        const textoAluno = dadosRedacao.redacao || dadosRedacao.textoRedacao || "";
+
+        if (!textoAluno || textoAluno.trim() === "") {
+            alert("⚠️ A redação está vazia no banco de dados!");
+            if (botaoHtml) restaurarBotaoIA(botaoHtml, textoOriginalBotao);
+            return;
+        }
+
+        const promptIA = `Você é um avaliador rigoroso, porém encorajador, de um concurso de redação escolar. Leia a redação abaixo e retorne APENAS duas linhas no seguinte formato exato:
+Nota: [Valor de 0 a 1000]
+Feedback: [Uma frase curta de feedback construtivo e motivador]
+
+Redação do aluno: "${textoAluno}"`;
+
+        let dadosIA = null;
+        let tentativas = 3;
+
+        while (tentativas > 0) {
+            const respostaIA = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${CHAVE_API_GEMINI}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptIA }] }]
+                })
+            });
+
+            dadosIA = await respostaIA.json();
+
+            if (dadosIA.candidates) break;
+
+            tentativas--;
+            if (tentativas > 0) await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
+        if (!dadosIA || !dadosIA.candidates) {
+            throw new Error("O servidor do Google está sobrecarregado no momento.");
+        }
+
+        const avaliacaoCompleta = dadosIA.candidates[0].content.parts[0].text;
+
+        await updateDoc(docRef, {
+            status: "avaliada",
+            resultadoIA: avaliacaoCompleta,
+            modeloUsado: "gemini-3.8-flash",
+            dataAvaliacao: new Date()
+        });
+
+        alert(`✅ Correção Concluída!\n\n${avaliacaoCompleta}`);
+        
+        if (typeof buscarRedacoesPendentes === 'function') buscarRedacoesPendentes();
+
+    } catch (error) {
+        console.error("Erro na comunicação com a IA:", error);
+        alert("❌ O sistema tropeçou no seguinte erro: " + error.message);
+        if (botaoHtml) restaurarBotaoIA(botaoHtml, textoOriginalBotao);
+    }
+};
+
+// Função auxiliar para voltar o botão ao normal em caso de erro
+function restaurarBotaoIA(botaoHtml, textoOriginal) {
+    botaoHtml.innerHTML = textoOriginal;
+    botaoHtml.style.backgroundColor = "#2E7D32";
+    botaoHtml.style.opacity = "1";
+    botaoHtml.disabled = false;
+}
+
+
+
+
+// ==========================================
+// 🎓 ALUNO: CARREGAR CENTRAL DE RESULTADOS (BLINDADO)
+// ==========================================
+window.carregarResultadosAluno = async function() {
+    const usuarioLogado = auth.currentUser;
+    if (!usuarioLogado) {
+        console.warn("⚠️ Nenhum utilizador logado no momento!");
+        return;
+    }
+
+    const container = document.getElementById("central-resultados-aluno");
+    if (!container) return;
+
+    container.innerHTML = "<p style='text-align: center; color: #666;'>⏳ A procurar os teus pergaminhos mágicos...</p>";
+
+    try {
+        // 🛡️ A MÁGICA DA PRIVACIDADE: Pega o e-mail exato do aluno logado
+        const emailLogado = (usuarioLogado.email || "").trim().toLowerCase();
+
+        // Consulta direta ao banco: traz APENAS redações carimbadas com o e-mail deste aluno
+        const q = query(collection(db, "redacoes"), where("emailAluno", "==", emailLogado));
+        const querySnapshot = await getDocs(q);
+
+        let minhasRedacoes = [];
+        querySnapshot.forEach((docSnap) => {
+            minhasRedacoes.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        if (minhasRedacoes.length === 0) {
+            container.innerHTML = "<p style='text-align: center; color: #666;'>📝 Ainda não enviaste nenhuma redação para a Banca Digital.</p>";
+            return;
+        }
+
+        container.innerHTML = ""; 
+
+        minhasRedacoes.forEach((dados) => {
+            const statusBruto = (dados.status || "").toLowerCase().trim();
+            let statusVisual = "";
+            let corStatus = "";
+            let parecerIA = "";
+
+            if (dados.resultadoIA || statusBruto === "avaliada" || statusBruto.includes("avaliad")) {
+                statusVisual = "Avaliada com Sucesso ✅";
+                corStatus = "#2ecc71"; 
+                
+                const textoFeedback = dados.resultadoIA ? dados.resultadoIA.replace(/\n/g, '<br>') : "Feedback indisponível.";
+                
+                parecerIA = `
+                    <div style="background: #fdfbf7; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 5px solid #2ecc71; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <h4 style="margin-top: 0; color: #2c3e50;">🤖 Parecer do Cérebro Mágico:</h4>
+                        <p style="margin-bottom: 0; line-height: 1.5; color: #34495e;">${textoFeedback}</p>
+                    </div>`;
+            } else {
+                statusVisual = "Em Análise pela Banca ⏳";
+                corStatus = "#f39c12"; 
+                parecerIA = "<p style='margin: 10px 0 0 0; color: #666;'><em>A tua redação está na mesa do Cérebro Mágico. Aguarda o resultado!</em></p>";
+            }
+
+            const card = document.createElement("div");
+            card.style.cssText = "background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
+            
+            card.innerHTML = `
+                <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #f1f2f6; padding-bottom: 10px; font-size: 1.1rem;">📜 O Meu Pergaminho (${dados.tema || 'Tema Livre'})</h3>
+                <p style="margin: 10px 0;"><strong>Status:</strong> <span style="color: ${corStatus}; font-weight: bold; background: ${corStatus}20; padding: 4px 8px; border-radius: 4px; font-size: 0.9rem;">${statusVisual}</span></p>
+                ${parecerIA}
+            `;
+            
+            container.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("Erro ao buscar resultados do aluno:", error);
+        container.innerHTML = "<p style='color: #c0392b;'>❌ Ocorreu um erro ao procurar os teus resultados.</p>";
+    }
+};
+
+
+// ==========================================
+// 🛡️ GESTÃO: GERENCIAR E EXCLUIR RECADOS APROVADOS/ANTIGOS
+// ==========================================
+window.carregarRecadosAprovados = async function() {
+    const container = document.getElementById('lista-mensagens-aprovadas');
+    if (!container) return;
+
+    container.innerHTML = '<p style="text-align: center; color: #8c6d46; font-style: italic;">⏳ Carregando recados publicados...</p>';
+
+    try {
+        const { query, collection, where, getDocs, deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+        const q = query(collection(db, "mural"), where("status", "==", "aprovado"));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+            container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">Nenhum recado publicado no momento.</p>';
+            return;
+        }
+
+        let recados = [];
+        snap.forEach(docSnap => recados.push({ id: docSnap.id, ...docSnap.data() }));
+
+        // Ordena dos mais recentes para os mais antigos
+        recados.sort((a, b) => {
+            const dataA = a.criadoEm && a.criadoEm.toDate ? a.criadoEm.toDate() : new Date(0);
+            const dataB = b.criadoEm && b.criadoEm.toDate ? b.criadoEm.toDate() : new Date(0);
+            return dataB - dataA;
+        });
+
+        let html = '';
+        recados.forEach(recado => {
+            // 🌟 APLICANDO O FEITIÇO DAS LETRAS AQUI TAMBÉM 🌟
+            let rawAluno = recado.aluno || "Anônimo";
+            let rawLivro = recado.livro || "Geral";
+            let rawTexto = recado.mensagem || "";
+            
+            const aluno = typeof capitalizar === 'function' ? capitalizar(rawAluno) : rawAluno;
+            const livro = typeof capitalizar === 'function' ? capitalizar(rawLivro) : rawLivro;
+            const textoFormatado = typeof capitalizar === 'function' ? capitalizar(rawTexto) : rawTexto;
+
+            const emailRegistrado = recado.emailAluno || recado.email || "E-mail não registrado";
+            const data = recado.criadoEm && recado.criadoEm.toDate ? new Date(recado.criadoEm.toDate()).toLocaleDateString('pt-BR') : "";
+
+            html += `
+                <div style="background: #fff; border: 1px solid #ccc; border-left: 5px solid #2E7D32; border-radius: 6px; padding: 10px 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 15px;">
+                    <div style="flex: 1;">
+                        <strong style="color: #5c4033;">👤 ${aluno}</strong> <span style="font-size: 0.8rem; color: #777;">(${data})</span><br>
+                        <span style="font-size: 0.8rem; color: #888; font-family: monospace;">📧 ${emailRegistrado}</span><br>
+                        <span style="font-size: 0.85rem; color: #8c6d46;">📚 Obra: <strong>${livro}</strong></span>
+                        <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #333; font-style: italic;">"${textoFormatado}"</p>
+                    </div>
+                    <button onclick="excluirRecadoMural('${recado.id}')" style="background-color: #8B0000; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; white-space: nowrap; transition: 0.2s;" onmouseover="this.style.backgroundColor='#5c0000'" onmouseout="this.style.backgroundColor='#8B0000'">
+                        🗑️ Excluir
+                    </button>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error("Erro ao carregar recados aprovados:", error);
+        container.innerHTML = '<p style="text-align: center; color: red;">Erro ao consultar mensagens do Mural.</p>';
+    }
+};
+
+
+window.excluirRecadoMural = async function(idDoc) {
+    const nivel = window.usuarioNivelAtual || localStorage.getItem('nivelUsuario');
+    if (nivel !== 'adm' && nivel !== 'gestao' && nivel !== 'admin') {
+        alert("⛔ Acesso Negado! Apenas a Gestão/ADM pode excluir recados do mural.");
+        return;
+    }
+
+    if (!confirm("⚠️ Tem certeza que deseja excluir este recado definitivamente do banco de dados?")) return;
+
+    try {
+        const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+        await deleteDoc(doc(db, "mural", idDoc));
+        alert("🗑️ Recado excluído com sucesso!");
+
+        // Atualiza a lista na mesma hora
+        if (typeof carregarRecadosAprovados === 'function') carregarRecadosAprovados();
+
+    } catch (error) {
+        console.error("Erro ao excluir recado:", error);
+        alert("❌ Erro ao apagar o recado no banco de dados.");
+    }
+};
+
+
+// ==========================================
+// 📅 CONFIGURAÇÃO DO PERÍODO DO CONCURSO DE REDAÇÃO
+// ==========================================
+const btnSalvarPeriodoConcurso = document.getElementById('btn-salvar-periodo-concurso');
+
+if (btnSalvarPeriodoConcurso) {
+    btnSalvarPeriodoConcurso.addEventListener('click', async () => {
+        const inputDataInicio = document.getElementById('concurso-data-inicio');
+        const inputDataFim = document.getElementById('concurso-data-fim');
+
+        if (!inputDataInicio || !inputDataFim) {
+            alert("❌ Os campos de data do concurso não foram encontrados no HTML.");
+            return;
+        }
+
+        const dataInicio = inputDataInicio.value;
+        const dataFim = inputDataFim.value;
+
+        if (!dataInicio || !dataFim) {
+            alert("⚠️ Preencha ambas as datas (Início e Fim) para definir o período do concurso.");
+            return;
+        }
+
+        try {
+            btnSalvarPeriodoConcurso.innerText = "⏳ A gravar no Cofre...";
+            btnSalvarPeriodoConcurso.disabled = true;
+
+            // Grava na coleção "configuracoes" no documento "concursoPeriodo"
+            await setDoc(doc(db, "configuracoes", "concursoPeriodo"), {
+                dataInicio: dataInicio,
+                dataFim: dataFim,
+                atualizadoPor: window.usuarioNivelAtual || "gestao",
+                atualizadoEm: new Date().toISOString()
+            }, { merge: true });
+
+            alert("✨ Feitiço realizado! O período do Concurso de Redação foi agendado com sucesso.");
+
+            if (typeof registrarLog === 'function') {
+                registrarLog(`Atualizou o período do Concurso de Redação: De ${dataInicio} até ${dataFim}`);
+            }
+
+        } catch (error) {
+            console.error("Erro ao salvar período do concurso:", error);
+            alert("❌ A magia falhou! Verifique a ligação com o banco de dados.");
+        } finally {
+            btnSalvarPeriodoConcurso.innerText = "💾 Salvar Período do Concurso";
+            btnSalvarPeriodoConcurso.disabled = false;
+        }
+    });
+}
+
+
+
+// ==========================================
+// 🏆 PÓDIO E RANKING DE REDAÇÃO (TOP 15)
+// ==========================================
+window.carregarRankingRedacao = async function() {
+    const podioContainer = document.getElementById('podio-redacao-container');
+    const listaContainer = document.getElementById('lista-top15-redacao');
+    
+    if (!podioContainer || !listaContainer) return;
+
+    podioContainer.innerHTML = '<p style="color: #8c6d46; font-style: italic; width: 100%; text-align: center;">⏳ A invocar as notas da Banca Digital...</p>';
+    listaContainer.innerHTML = '';
+
+    try {
+        const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+        
+        // Puxa todas as redações do banco de dados
+        const snap = await getDocs(collection(db, "redacoes"));
+        
+        let redacoesAvaliadas = [];
+        
+        snap.forEach(doc => {
+            let data = doc.data();
+            // Verifica se a redação já foi avaliada e tem uma nota gravada
+            if (data.nota !== undefined && data.nota !== null) {
+                redacoesAvaliadas.push({ id: doc.id, ...data });
+            }
+        });
+
+        if (redacoesAvaliadas.length === 0) {
+            podioContainer.innerHTML = '<p style="color: #8c6d46; font-style: italic; width: 100%; text-align: center;">Nenhum pergaminho foi avaliado ainda.</p>';
+            return;
+        }
+
+        // Ordena da MAIOR nota para a MENOR nota
+        redacoesAvaliadas.sort((a, b) => Number(b.nota) - Number(a.nota));
+
+        // Pega apenas as 15 melhores
+        let top15 = redacoesAvaliadas.slice(0, 15);
+
+        // 🧠 A REGRA DE EMPATE INTELIGENTE (Dense Ranking)
+        let rankAtual = 1;
+        let notaAnterior = -1;
+        
+        top15.forEach((redacao, index) => {
+            if (index === 0) {
+                redacao.rank = rankAtual;
+            } else {
+                // Se a nota for menor que a anterior, desce uma posição no pódio
+                if (Number(redacao.nota) < notaAnterior) {
+                    rankAtual++;
+                }
+                redacao.rank = rankAtual;
+            }
+            notaAnterior = Number(redacao.nota);
+        });
+
+        // 🎨 CONSTRUÇÃO DO VISUAL DO PÓDIO E DA LISTA
+        let htmlPodio = '';
+        let htmlLista = '';
+
+        top15.forEach(redacao => {
+            const nome = redacao.aluno || redacao.nome || "Aprendiz Anônimo";
+            const notaFmt = Number(redacao.nota).toFixed(1); // Formata para 1 casa decimal (ex: 9.5)
+            
+            // Se estiver entre os 3 primeiros lugares
+            if (redacao.rank <= 3) {
+                let corBorda, tituloMedalha, alturaPodio;
+                
+                if (redacao.rank === 1) { 
+                    corBorda = '#FFD700'; tituloMedalha = '🥇 Ouro'; alturaPodio = '150px'; 
+                } else if (redacao.rank === 2) { 
+                    corBorda = '#C0C0C0'; tituloMedalha = '🥈 Prata'; alturaPodio = '130px'; 
+                } else { 
+                    corBorda = '#CD7F32'; tituloMedalha = '🥉 Bronze'; alturaPodio = '110px'; 
+                }
+                
+                htmlPodio += `
+                    <div style="background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(92,64,51,0.8)); border: 3px solid ${corBorda}; border-radius: 12px 12px 0 0; width: 140px; height: ${alturaPodio}; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; text-align: center; color: white; box-shadow: 0 -4px 12px rgba(0,0,0,0.4); position: relative;">
+                        <span style="font-size: 1.8rem; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: #fdf5e6; border-radius: 50%; padding: 2px;">${tituloMedalha.split(' ')[0]}</span>
+                        <strong style="font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; text-shadow: 1px 1px 2px black;" title="${nome}">${nome}</strong>
+                        <span style="color: ${corBorda}; font-weight: bold; font-size: 1.3rem; text-shadow: 1px 1px 2px black;">${notaFmt}</span>
+                    </div>
+                `;
+            } 
+            // Do 4º lugar até ao 15º
+            else {
+                htmlLista += `
+                    <div style="background: white; border: 1px solid #ccc; border-left: 5px solid #5c4033; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div>
+                            <strong style="color: #8B0000; font-size: 1.1rem; width: 40px; display: inline-block;">${redacao.rank}º</strong>
+                            <span style="color: #333; margin-left: 5px; font-weight: bold;">👤 ${nome}</span>
+                        </div>
+                        <span style="background: rgba(140, 109, 70, 0.2); color: #5c4033; padding: 4px 12px; border-radius: 12px; font-weight: bold; border: 1px solid #8c6d46;">Nota: ${notaFmt}</span>
+                    </div>
+                `;
+            }
+        });
+
+        podioContainer.innerHTML = htmlPodio || '<p style="color: #8c6d46; font-style: italic; width: 100%; text-align: center;">Aguardando os grandes campeões...</p>';
+        listaContainer.innerHTML = htmlLista || '<p style="color: #666; font-style: italic; text-align: center; padding: 10px;">Nenhum outro aprendiz classificado no Top 15 ainda.</p>';
+
+    } catch (error) {
+        console.error("Erro ao carregar ranking da redação:", error);
+        podioContainer.innerHTML = '<p style="color: red; width: 100%; text-align: center;">❌ Falha mágica ao buscar as notas do cofre.</p>';
+    }
+};
+
+// Gatilho para atualizar automaticamente ao clicar na aba Redação
+const btnTabRedacaoRank = document.getElementById('btn-tab-redacao');
+if (btnTabRedacaoRank) {
+    btnTabRedacaoRank.addEventListener('click', () => {
+        if (typeof carregarRankingRedacao === 'function') {
+            carregarRankingRedacao();
+        }
+    });
+}
+
+
+
+// ==========================================
+// 📢 AVISO DO PERÍODO DO CONCURSO PARA O ALUNO
+// ==========================================
+window.buscarPeriodoConcurso = async function() {
+    const spanPeriodo = document.getElementById('periodo-concurso-tela');
+    if (!spanPeriodo) return;
+
+    try {
+        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+        
+        // Vai até ao Cofre buscar a data que a Gestão salvou
+        const docRef = doc(db, "configuracoes", "concursoPeriodo");
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const dados = docSnap.data();
+            if (dados.dataInicio && dados.dataFim) {
+                // Converte de AAAA-MM-DD para DD/MM/AAAA (padrão brasileiro)
+                const inicioFmt = dados.dataInicio.split('-').reverse().join('/');
+                const fimFmt = dados.dataFim.split('-').reverse().join('/');
+                
+                spanPeriodo.innerText = `(Período Válido: ${inicioFmt} até ${fimFmt})`;
+            } else {
+                spanPeriodo.innerText = "(Período ainda não definido pelos Mestres)";
+            }
+        } else {
+            spanPeriodo.innerText = "(Período ainda não definido pelos Mestres)";
+        }
+    } catch (error) {
+        console.error("Erro ao buscar o período do concurso:", error);
+        spanPeriodo.innerText = "(Os oráculos não conseguiram ler a data)";
+    }
+};
+
+// Dispara a busca da data assim que o aluno clica na aba de Redação
+const btnTabRedacaoAviso = document.getElementById('btn-tab-redacao');
+if (btnTabRedacaoAviso) {
+    btnTabRedacaoAviso.addEventListener('click', () => {
+        if (typeof buscarPeriodoConcurso === 'function') {
+            buscarPeriodoConcurso();
+        }
+    });
+}
